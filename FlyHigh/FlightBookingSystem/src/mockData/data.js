@@ -8,9 +8,9 @@ export const NavbarMenu =[
   },
   {
     id:2,
-    title:"Shop",
-    link:"/machinaries/src/components/Shop.jsx",
-    name:'Shop',
+    title:"Flights",
+    link:"/machinaries/src/components/Flights.jsx",
+    name:'Flights',
   },
   {
   id:3,

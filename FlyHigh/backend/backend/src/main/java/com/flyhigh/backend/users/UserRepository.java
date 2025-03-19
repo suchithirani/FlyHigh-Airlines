@@ -1,6 +1,5 @@
-package com.flyhigh.backend.repository;
+package com.flyhigh.backend.users;
 
-import com.flyhigh.backend.models.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
