@@ -1,27 +1,20 @@
-/* eslint-disable react/prop-types */
 import { useState, useEffect } from "react";
 import {
   Plane,
   Clock,
   MapPin,
-  Pause,
-  Play,
   ChevronLeft,
   ChevronRight,
   PlaneLanding,
   PlaneTakeoff,
-  
 } from "lucide-react";
 import { PiAirplaneInFlight } from "react-icons/pi";
 import FlightFilter from "./FlightFilter";
+
 const Badge = ({ children, variant = "default" }) => (
   <span
     className={`px-2 py-1 rounded-full text-sm font-medium 
-    ${
-      variant === "default"
-        ? "bg-blue-100 text-blue-800"
-        : "bg-gray-100 text-gray-800"
-    }`}
+    ${variant === "default" ? "bg-blue-100 text-blue-800" : "bg-gray-100 text-gray-800"}`}
   >
     {children}
   </span>
@@ -30,7 +23,6 @@ const Badge = ({ children, variant = "default" }) => (
 const FlightTimetable = () => {
   const [activeView, setActiveView] = useState("carousel");
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [isAutoPlaying, setIsAutoPlaying] = useState(true);
 
   const [flights] = useState([
     {
@@ -40,12 +32,14 @@ const FlightTimetable = () => {
       destination: "London (LHR)",
       departureTime: "09:00",
       arrivalTime: "21:00",
-      gate: "A1",
+      availableSeats: "45",
       terminal: "T1",
       status: "On Time",
       type: "Departure",
       aircraft: "Boeing 787",
       airline: "Global Airways",
+      duration: "7h 30m",
+      arrivalTerminal: "T5",
     },
     {
       id: 2,
@@ -54,12 +48,14 @@ const FlightTimetable = () => {
       destination: "Tokyo (NRT)",
       departureTime: "11:30",
       arrivalTime: "14:30",
-      gate: "B2",
+      availableSeats: "60",
       terminal: "T2",
       status: "Delayed",
       type: "Arrival",
       aircraft: "Airbus A350",
       airline: "Sky Connect",
+      duration: "12h 0m",
+      arrivalTerminal: "T3",
     },
     {
       id: 3,
@@ -68,61 +64,46 @@ const FlightTimetable = () => {
       destination: "Singapore (SIN)",
       departureTime: "15:45",
       arrivalTime: "04:30",
-      gate: "C3",
+      availableSeats: "120",
       terminal: "T3",
       status: "On Time",
       type: "Departure",
       aircraft: "Boeing 777",
       airline: "Star Airlines",
+      duration: "7h 45m",
+      arrivalTerminal: "T4",
     },
     {
-      id: 3,
-      flightNumber: "FL789",
-      origin: "Dubai (DXB)",
-      destination: "Singapore (SIN)",
-      departureTime: "15:45",
-      arrivalTime: "04:30",
-      gate: "C3",
-      terminal: "T3",
-      status: "On Time",
-      type: "Departure",
-      aircraft: "Boeing 777",
-      airline: "Star Airlines",
-    },{
       id: 4,
       flightNumber: "FL018",
       origin: "Mumbai(BOM)",
       destination: "Agatti (AGX)",
       departureTime: "7:30",
       arrivalTime: "01:30",
-      gate: "C2",
+      availableSeats: "30",
       terminal: "T2",
       status: "On Time",
-      type: "Air",
+      type: "Departure",
       aircraft: "FLY91",
       airline: "Indigo",
+      duration: "5h 0m",
+      arrivalTerminal: "T2",
     },
-    
   ]);
-  
+
   useEffect(() => {
-    let intervalId;
-    if (isAutoPlaying && flights.length > 0 && activeView === "carousel") {
-      intervalId = setInterval(() => {
-        setCurrentIndex((prevIndex) => (prevIndex + 1) % flights.length);
-      }, 3000);
-    }
+    const intervalId = setInterval(() => {
+      setCurrentIndex((prevIndex) => (prevIndex + 1) % flights.length);
+    }, 3000);
     return () => clearInterval(intervalId);
-  }, [isAutoPlaying, flights.length, activeView]);
+  }, [flights.length]);
 
   const goToNext = () => {
     setCurrentIndex((prevIndex) => (prevIndex + 1) % flights.length);
   };
 
   const goToPrevious = () => {
-    setCurrentIndex(
-      (prevIndex) => (prevIndex - 1 + flights.length) % flights.length
-    );
+    setCurrentIndex((prevIndex) => (prevIndex - 1 + flights.length) % flights.length);
   };
 
   const TerminalMap = ({ terminal }) => (
@@ -142,25 +123,23 @@ const FlightTimetable = () => {
   );
 
   const FlightCard = ({ flight }) => (
-    <div className="bg-white rounded-lg border p-6 shadow-sm">
+    <div className="bg-white rounded-lg border p-6 shadow-lg transition-all transform hover:scale-105">
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-2">
           {flight.type === "Departure" ? (
             <PlaneTakeoff className="text-blue-500" />
-          ) : flight.type==="Arrival"?(
+          ) : flight.type === "Arrival" ? (
             <PlaneLanding className="text-green-500" />
-          ): <PiAirplaneInFlight className="text-yellow-500 size-7"/>}
-          
+          ) : (
+            <PiAirplaneInFlight className="text-yellow-500 size-7" />
+          )}
+
           <div>
-            <h3 className="text-xl font-semibold">
-              Flight {flight.flightNumber}
-            </h3>
+            <h3 className="text-xl font-semibold">{`Flight ${flight.flightNumber}`}</h3>
             <p className="text-sm text-gray-500">{flight.airline}</p>
           </div>
         </div>
-        <Badge variant={flight.status === "On Time" ? "default" : "secondary"}>
-          {flight.status}
-        </Badge>
+        <Badge variant={flight.status === "On Time" ? "default" : "secondary"}>{flight.status}</Badge>
       </div>
 
       <div className="grid md:grid-cols-2 gap-6">
@@ -199,8 +178,8 @@ const FlightTimetable = () => {
         <div className="flex items-center gap-2">
           <MapPin className="w-4 h-4 text-gray-500" />
           <div>
-            <p className="text-sm text-gray-500">Gate</p>
-            <p className="font-medium">{flight.gate}</p>
+            <p className="text-sm text-gray-500">Available Seats</p>
+            <p className="font-medium">{flight.availableSeats}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -222,6 +201,15 @@ const FlightTimetable = () => {
       <div className="mt-4">
         <TerminalMap terminal={flight.terminal} />
       </div>
+
+      <div className="mt-4">
+        <p className="text-sm text-gray-500">Flight Duration</p>
+        <p className="font-medium">{flight.duration}</p>
+      </div>
+      <div className="mt-2">
+        <p className="text-sm text-gray-500">Arrival Terminal</p>
+        <p className="font-medium">{flight.arrivalTerminal}</p>
+      </div>
     </div>
   );
 
@@ -230,60 +218,30 @@ const FlightTimetable = () => {
       <table className="w-full">
         <thead className="bg-gray-50 border-b">
           <tr>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-              Type
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-              Flight
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-              Airline
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-              Origin
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-              Destination
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-              Departure
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-              Arrival
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-              Gate
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-              Status
-            </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Flight</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Airline</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Origin</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Destination</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Departure</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Arrival</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Available Seats</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
           </tr>
         </thead>
         <tbody className="bg-white divide-y divide-gray-200">
           {flights.map((flight) => (
             <tr key={flight.id}>
-              <td className="px-6 py-4">
-              {flight.type === "Departure" ? (
-            <PlaneTakeoff className="text-blue-500" />
-          ) : flight.type==="Arrival"?(
-            <PlaneLanding className="text-green-500" />
-          ): <PiAirplaneInFlight className="text-yellow-500 size-7"/>}
-              </td>
+              <td className="px-6 py-4">{flight.type === "Departure" ? <PlaneTakeoff className="text-blue-500" /> : flight.type === "Arrival" ? <PlaneLanding className="text-green-500" /> : <PiAirplaneInFlight className="text-yellow-500 size-7" />}</td>
               <td className="px-6 py-4 font-medium">{flight.flightNumber}</td>
               <td className="px-6 py-4">{flight.airline}</td>
               <td className="px-6 py-4">{flight.origin}</td>
               <td className="px-6 py-4">{flight.destination}</td>
               <td className="px-6 py-4">{flight.departureTime}</td>
               <td className="px-6 py-4">{flight.arrivalTime}</td>
-              <td className="px-6 py-4">{`${flight.terminal}-${flight.gate}`}</td>
+              <td className="px-6 py-4">{flight.availableSeats}</td>
               <td className="px-6 py-4">
-                <Badge
-                  variant={
-                    flight.status === "On Time" ? "default" : "secondary"
-                  }
-                >
-                  {flight.status}
-                </Badge>
+                <Badge variant={flight.status === "On Time" ? "default" : "secondary"}>{flight.status}</Badge>
               </td>
             </tr>
           ))}
@@ -293,52 +251,23 @@ const FlightTimetable = () => {
   );
 
   return (
-    
     <div className="p-4 max-w-6xl mx-auto">
       <div className="flex justify-between items-center mb-7">
-      
-        <h2 className="text-2xl font-bold mr-24">Flight Information
-        
-        </h2>
-        
+        <h2 className="text-2xl font-bold mr-24">Flight Information</h2>
         <div className="flex gap-4 items-center">
-          {activeView === "carousel" && (
-            <button
-              onClick={() => setIsAutoPlaying(!isAutoPlaying)}
-              className="inline-flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-gray-50"
-            >
-              
-              {isAutoPlaying ? (
-                <Pause className="w-4 h-4" />
-              ) : (
-                <Play className="w-4 h-4" />
-              )}
-              {isAutoPlaying ? "Pause" : "Play"} Slideshow
-            </button>
-          )}
-          
           <div className="flex rounded-lg border divide-x">
             <button
               onClick={() => setActiveView("carousel")}
-              className={`px-4 py-2 ${
-                activeView === "carousel"
-                  ? "bg-blue-50 text-blue-600"
-                  : "hover:bg-gray-50"
-              }`}
+              className={`px-4 py-2 ${activeView === "carousel" ? "bg-blue-50 text-blue-600" : "hover:bg-gray-50"}`}
             >
               Carousel View
             </button>
             <button
               onClick={() => setActiveView("timetable")}
-              className={`px-4 py-2 ${
-                activeView === "timetable"
-                  ? "bg-blue-50 text-blue-600"
-                  : "hover:bg-gray-50"
-              }`}
+              className={`px-4 py-2 ${activeView === "timetable" ? "bg-blue-50 text-blue-600" : "hover:bg-gray-50"}`}
             >
               Timetable
             </button>
-            
           </div>
         </div>
       </div>
@@ -346,9 +275,7 @@ const FlightTimetable = () => {
       {activeView === "carousel" ? (
         <div className="relative">
           <div className="transition-opacity duration-500">
-            {flights.length > 0 && (
-              <FlightCard flight={flights[currentIndex]} />
-            )}
+            {flights.length > 0 && <FlightCard flight={flights[currentIndex]} />}
           </div>
 
           {flights.length > 1 && (
@@ -363,7 +290,6 @@ const FlightTimetable = () => {
                 className="absolute -right-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-white border shadow-sm hover:bg-gray-50"
                 onClick={goToNext}
               >
-                
                 <ChevronRight className="w-4 h-4" />
               </button>
             </>

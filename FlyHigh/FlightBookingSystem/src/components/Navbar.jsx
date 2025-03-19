@@ -9,9 +9,9 @@ import Login from './Login'
 import Signup from './Signup';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import  Home  from './Home';
-import Shop from './Shop';
-import {Contact} from './Contact'
-import { About } from './About';
+import Flight from './Flight';
+import Contact from './Contact'
+import  About  from './About';
 import App from '../App';
 // import { Outlet } from 'react-router-dom';
 function Navbar() {
@@ -147,7 +147,7 @@ function Navbar() {
           <Routes>
             <Route path='/' element={<Home/>}/>
           <Route  path='/home' index element={<Home/>}/>
-          <Route path='/shop' element={<Shop/>}/>
+          <Route path='/flights' element={<Flight/>}/>
           <Route path='/contact' element={<Contact/>}/>
           <Route path='/about' element={<About/>}/>
 

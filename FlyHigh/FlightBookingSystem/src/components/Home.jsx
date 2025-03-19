@@ -1,246 +1,167 @@
-import React, { useState } from 'react';
-import { Search, Plane, MapPin, Calendar, ChevronRight, Star, ArrowRightCircle } from 'lucide-react';
-import { Card, CardContent, TextField, Button, MenuItem, Select, InputLabel, FormControl, Rating, Slider } from '@mui/material';
-import { cyan } from '@mui/material/colors';
+import React, { useState, useRef, useEffect } from 'react';
+import { Search, Plane, MapPin, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Card, CardContent, TextField, Button, MenuItem, Select, InputLabel, FormControl, Rating } from '@mui/material';
+import destinations from '../mockData/Destination';
+import { useNavigate } from 'react-router-dom';
+
 const Home = () => {
   const [departureDate, setDepartureDate] = useState('');
   const [returnDate, setReturnDate] = useState('');
   const [currency, setCurrency] = useState('USD');
   const [selectedDestination, setSelectedDestination] = useState(null);
-  const [sortOption, setSortOption] = useState('price');
-  const [priceRange, setPriceRange] = useState([100, 1000]);
+  const carouselRef = useRef(null);
+  const navigate = useNavigate();
 
-  const featuredDestinations = [
-    { 
-      name: 'Paris, France', 
-      price: 599,
-      image: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34',
-      rating: 4.5
-    },
-    { 
-      name: 'Tokyo, Japan', 
-      price: 899,
-      image: 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf',
-      rating: 4.7
-    },
-    { 
-      name: 'New York, USA', 
-      price: 399,
-      image: 'https://images.unsplash.com/photo-1522083165195-3424ed129620',
-      rating: 4.2
-    },
-    {
-      name: 'Agra, India', 
-      price: 199,
-      image: 'https://plus.unsplash.com/premium_photo-1661885523029-fc960a2bb4f3?q=80&w=1770&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-      rating: 4.3
-    },
-    {
-      name: 'Moscow, Russia', 
-      price: 999,
-      image: 'https://plus.unsplash.com/premium_photo-1697729939290-40a6275148cd?q=80&w=1962&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-      rating: 4.6
-    },
-    {
-      name: 'Dubai, UAE', 
-      price: 899,
-      image: 'https://images.unsplash.com/photo-1518684079-3c830dcef090?q=80&w=1887&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-      rating: 4.8
+  const handleDestinationClick = (destination) => {
+    setSelectedDestination(destination === selectedDestination ? null : destination);
+  };
+
+  const scrollCarousel = (direction) => {
+    if (carouselRef.current) {
+      const scrollAmount = 120; // Approximate width of one item plus margin
+      const currentScroll = carouselRef.current.scrollLeft;
+      const newScroll = direction === 'left' 
+        ? currentScroll - scrollAmount 
+        : currentScroll + scrollAmount;
+      
+      carouselRef.current.scrollTo({
+        left: newScroll,
+        behavior: 'smooth'
+      });
     }
-  ];
-
-  const handleCurrencyChange = (event) => {
-    setCurrency(event.target.value);
   };
 
-  const handleSortChange = (event) => {
-    setSortOption(event.target.value);
-  };
-
-  const handlePriceChange = (event, newValue) => {
-    setPriceRange(newValue);
-  };
-
-  // Sort destinations based on the selected sort option
-  const sortedDestinations = [...featuredDestinations].sort((a, b) => {
-    if (sortOption === 'price') {
-      return a.price - b.price;
-    } else if (sortOption === 'rating') {
-      return b.rating - a.rating;
-    }
-    return 0;
-  });
+  function bookFlight() {
+    navigate('/booking');
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-cyan-600 p-8 text-white">
-        <div className="container mx-auto">
-          <div className="h-12 w-36 bg-white/20 rounded mb-6"></div>
-          <h1 className="text-5xl font-bold mb-4">Discover Your Next Adventure</h1>
-          <p className="text-xl text-blue-100">Fly to over 100+ destinations worldwide</p>
-        </div>
+    <div className="min-h-screen bg-gray-900 text-white">
+      <header className="bg-blue-900 p-8 text-center">
+        <h1 className="text-5xl font-bold mb-4">Discover Your Next Adventure</h1>
+        <p className="text-xl text-blue-300">Fly to over 100+ destinations worldwide</p>
       </header>
 
-      <main className="container mx-auto px-4 -mt-16">
-        <Card className="p-6 mb-12 shadow-xl">
+      <main className="container mx-auto px-4 mt-8">
+        <Card className="bg-blue-800 text-white p-8 shadow-xl rounded-lg">
           <CardContent>
+            <h2 className="text-3xl font-semibold mb-4 text-center">Search Flights</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div>
-                <TextField
-                  label="Departure City"
-                  variant="outlined"
-                  fullWidth
-                  InputProps={{
-                    startAdornment: <MapPin className="mr-2 text-gray-400" />
-                  }}
-                />
-              </div>
-              <div>
-                <TextField
-                  label="Arrival City"
-                  variant="outlined"
-                  fullWidth
-                  InputProps={{
-                    startAdornment: <MapPin className="mr-2 text-gray-400" />
-                  }}
-                />
-              </div>
-              <div>
-                <TextField
-                  label="Departure"
-                  type="date"
-                  variant="outlined"
-                  value={departureDate}
-                  onChange={(e) => setDepartureDate(e.target.value)}
-                  fullWidth
-                  InputLabelProps={{
-                    shrink: true,
-                  }}
-                  InputProps={{
-                    startAdornment: <Calendar className="mr-2 text-gray-400" />
-                  }}
-                />
-              </div>
-              <div>
-                <TextField
-                  label="Return"
-                  type="date"
-                  variant="outlined"
-                  value={returnDate}
-                  onChange={(e) => setReturnDate(e.target.value)}
-                  fullWidth
-                  InputLabelProps={{
-                    shrink: true,
-                  }}
-                  InputProps={{
-                    startAdornment: <Calendar className="mr-2 text-gray-400" />
-                  }}
-                />
-              </div>
+              <TextField label="Departure City" variant="outlined" fullWidth InputProps={{ startAdornment: <MapPin className="mr-2 text-gray-400" /> }} />
+              <TextField label="Arrival City" variant="outlined" fullWidth InputProps={{ startAdornment: <MapPin className="mr-2 text-gray-400" /> }} />
+              <TextField label="Departure" type="date" variant="outlined" value={departureDate} onChange={(e) => setDepartureDate(e.target.value)} fullWidth InputLabelProps={{ shrink: true }} />
+              <TextField label="Return" type="date" variant="outlined" value={returnDate} onChange={(e) => setReturnDate(e.target.value)} fullWidth InputLabelProps={{ shrink: true }} />
             </div>
-
-            <div className="mt-6 text-center ">
-              <Button variant="contained" className="px-8 py-3" style={{ background: "#00acc1" }}>
+            <div className="mt-6 text-center">
+              <Button variant="contained" className="px-8 py-3 bg-cyan-600 hover:bg-cyan-500">
                 <Search className="w-4 h-4 mr-2" />
                 Search Flights
               </Button>
             </div>
-
             <FormControl fullWidth className="mt-6">
               <InputLabel>Currency</InputLabel>
-              <Select
-                value={currency}
-                onChange={handleCurrencyChange}
-                label="Currency"
-                style={{ fontSize: '1.25rem' }} // Increased font size
-              >
+              <Select value={currency} onChange={(e) => setCurrency(e.target.value)} label="Currency">
                 <MenuItem value="USD">USD</MenuItem>
                 <MenuItem value="EUR">EUR</MenuItem>
                 <MenuItem value="INR">INR</MenuItem>
                 <MenuItem value="GBP">GBP</MenuItem>
               </Select>
             </FormControl>
-
-            <div className="mt-6">
-              <InputLabel>Sort By</InputLabel>
-              <Select
-                value={sortOption}
-                onChange={handleSortChange}
-                label="Sort By"
-                fullWidth
-              >
-                <MenuItem value="price">Price</MenuItem>
-                <MenuItem value="rating">Rating</MenuItem>
-              </Select>
-            </div>
-
-            <div className="mt-6">
-              <InputLabel>Price Range</InputLabel>
-              <Slider
-                value={priceRange}
-                onChange={handlePriceChange}
-                valueLabelDisplay="auto"
-                valueLabelFormat={(value) => `$${value}`}
-                min={100}
-                max={2000}
-              />
-            </div>
           </CardContent>
         </Card>
 
-        <section className="mb-12">
-          <h2 className="text-3xl font-bold mb-6">Featured Destinations</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {sortedDestinations.map((dest, index) => (
-              <Card key={index} className="overflow-hidden group cursor-pointer animate-floating">
-                <div className="relative">
-                  <div className="absolute inset-0 bg-blue-100"></div>
-                  <div
-                    className="w-full h-48 bg-cover bg-center group-hover:scale-105 transition-transform duration-300"
-                    style={{ backgroundImage: `url(${dest.image})` }}
-                    role="img"
-                    aria-label={dest.name}
-                  ></div>
-                </div>
-                <CardContent className="p-4">
-                  <h3 className="text-xl font-semibold mb-2">{dest.name}</h3>
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-600">From ${dest.price}</span>
-                    <div className="flex items-center">
-                      <Rating value={dest.rating} readOnly size="small" />
-                      <span className="ml-2 text-gray-600">({dest.rating})</span>
-                    </div>
-                    <Button variant="outlined" size="small">
-                      <Plane className="w-4 h-4 mr-2" />
-                      Book Now
-                    </Button>
+        {/* Replaced Featured Destinations with Instagram Story-like carousel */}
+        <section className="mt-12">
+          <h2 className="text-3xl font-bold mb-6 text-center">Popular Destinations</h2>
+          
+          {/* Instagram Story-like Carousel */}
+          <div className="relative px-8">
+            <div 
+              ref={carouselRef}
+              className="flex overflow-x-auto pb-4 space-x-4 hide-scrollbar scroll-smooth snap-x"
+            >
+              {destinations.map((dest) => (
+                <div 
+                  key={dest.code} 
+                  className="flex-shrink-0 cursor-pointer transition-all duration-300 snap-center"
+                  onClick={() => handleDestinationClick(dest)}
+                >
+                  <div className={`w-24 h-24 rounded-full overflow-hidden border-4 flex items-center justify-center relative ${selectedDestination === dest ? 'border-cyan-400 scale-110' : 'border-blue-500'}`}>
+                    <div className="absolute inset-0 bg-gradient-to-b from-transparent to-blue-900 opacity-70"></div>
+                    <div className="relative z-10 text-white font-bold text-xl">{dest.code}</div>
                   </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </section>
-
-        <section className="mb-12 bg-blue-50 rounded-xl p-8">
-          <div className="max-w-2xl mx-auto text-center">
-            <h2 className="text-3xl font-bold mb-4">Why Choose FlyHigh?</h2>
-            <p className="text-gray-600 mb-8">
-              Experience premium service, competitive prices, and unforgettable journeys 
-              with our award-winning airline. re committed to making your travel 
-              dreams come true.
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {['24/7 Support', 'Best Prices', 'Safe Travel'].map((feature, index) => (
-                <div key={index} className="p-4 bg-white rounded-lg shadow-sm">
-                  <h3 className="font-semibold mb-2">{feature}</h3>
                 </div>
               ))}
             </div>
+            
+            {/* Left/Right navigation arrows */}
+            <button 
+              className="absolute left-0 top-1/2 transform -translate-y-1/2 bg-blue-800 bg-opacity-70 hover:bg-opacity-90 rounded-full p-2 text-white transition-all duration-200 shadow-lg"
+              onClick={() => scrollCarousel('left')}
+            >
+              <ChevronLeft className="w-6 h-6" />
+            </button>
+            <button 
+              className="absolute right-0 top-1/2 transform -translate-y-1/2 bg-blue-800 bg-opacity-70 hover:bg-opacity-90 rounded-full p-2 text-white transition-all duration-200 shadow-lg"
+              onClick={() => scrollCarousel('right')}
+            >
+              <ChevronRight className="w-6 h-6" />
+            </button>
           </div>
+          
+          {/* Expanded destination view */}
+          {selectedDestination && (
+            <div className="mt-8 bg-blue-700 rounded-lg overflow-hidden transition-all duration-500 transform animate-fadeIn shadow-xl">
+              <div className="relative">
+                <div className="w-full h-64 md:h-80 bg-cover bg-center" style={{ backgroundImage: `url(${selectedDestination.image})` }}></div>
+                <div className="absolute inset-0 bg-gradient-to-t from-blue-900 to-transparent opacity-70"></div>
+                <div className="absolute bottom-0 left-0 p-6">
+                  <h3 className="text-3xl font-bold text-white">{selectedDestination.name}</h3>
+                  <p className="text-xl text-blue-200">From ${selectedDestination.price}</p>
+                </div>
+                <div className="absolute top-4 right-4">
+                  <Button 
+                    variant="contained" 
+                    className="bg-blue-500 hover:bg-blue-400"
+                    onClick={bookFlight}
+                  >
+                    <Plane className="w-4 h-4 mr-2" />
+                    Book Now
+                  </Button>
+                </div>
+              </div>
+              <div className="p-6">
+                <p className="text-white">Experience the beauty and charm of {selectedDestination.name}. Book your flight today and enjoy special discounts!</p>
+                <div className="mt-2 flex items-center">
+                  <Rating value={4.5} readOnly size="small" />
+                  <span className="ml-2 text-blue-300">(4.5)</span>
+                </div>
+                
+                {/* Image carousel for selected destination */}
+                <div className="mt-6">
+                  <h4 className="text-xl font-semibold mb-3">Gallery</h4>
+                  <div className="relative">
+                    <div className="flex space-x-3 overflow-x-auto pb-4 hide-scrollbar">
+                      {[1, 2, 3, 4].map((_, idx) => (
+                        <div key={idx} className="flex-shrink-0 w-40 h-24 rounded-lg overflow-hidden">
+                          <div className="w-full h-full bg-blue-400">
+                            {/* Placeholder for destination images */}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Quick info section */}
+
+              </div>
+            </div>
+          )}
         </section>
       </main>
 
-      <footer className="bg-gray-900 text-white py-12">
+      <footer className="bg-blue-950 text-white py-12 mt-12">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div>
@@ -276,11 +197,26 @@ const Home = () => {
               </ul>
             </div>
           </div>
-          <div className="mt-8 pt-8 border-t border-gray-800 text-center text-gray-400">
-            <p>&copy; {new Date().getFullYear()} FlyHigh Airlines. All rights reserved.</p>
-          </div>
         </div>
       </footer>
+      
+      {/* CSS for hiding scrollbar but allowing scroll */}
+      <style jsx>{`
+        .hide-scrollbar {
+          -ms-overflow-style: none;  /* IE and Edge */
+          scrollbar-width: none;  /* Firefox */
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+          display: none;  /* Chrome, Safari and Opera */
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        .animate-fadeIn {
+          animation: fadeIn 0.5s ease-in-out;
+        }
+      `}</style>
     </div>
   );
 };
