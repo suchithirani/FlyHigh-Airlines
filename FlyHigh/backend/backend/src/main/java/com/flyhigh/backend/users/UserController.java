@@ -7,7 +7,9 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+
 @RestController
+@CrossOrigin(origins = "*")
 @RequestMapping("/api/users")
 public class UserController {
 
@@ -27,6 +29,13 @@ public class UserController {
     }
 
     @PostMapping
+    public ResponseEntity<User> getUserDetailsByEmail(@RequestBody User user) {
+        System.out.println(user.toString());
+        return userService.findByEmail(user.getEmail()).map(ResponseEntity::ok)
+        .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PostMapping("/user")
     public User createUser(@RequestBody User user) {
         return userService.createUser(user);
     }

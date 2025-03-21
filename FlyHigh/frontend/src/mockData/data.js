@@ -24,4 +24,5 @@ export const NavbarMenu =[
     link:"/machinaries/src/components/Contact.jsx",
     name:'Contact'
   }
+  
 ];

@@ -82,7 +82,7 @@ const Home = () => {
             >
               {destinations.map((dest) => (
                 <div 
-                  key={dest.code} 
+                  key={dest.id}
                   className="flex-shrink-0 cursor-pointer transition-all duration-300 snap-center"
                   onClick={() => handleDestinationClick(dest)}
                 >
@@ -152,9 +152,6 @@ const Home = () => {
                     </div>
                   </div>
                 </div>
-                
-                {/* Quick info section */}
-
               </div>
             </div>
           )}
@@ -199,24 +196,6 @@ const Home = () => {
           </div>
         </div>
       </footer>
-      
-      {/* CSS for hiding scrollbar but allowing scroll */}
-      <style jsx>{`
-        .hide-scrollbar {
-          -ms-overflow-style: none;  /* IE and Edge */
-          scrollbar-width: none;  /* Firefox */
-        }
-        .hide-scrollbar::-webkit-scrollbar {
-          display: none;  /* Chrome, Safari and Opera */
-        }
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        .animate-fadeIn {
-          animation: fadeIn 0.5s ease-in-out;
-        }
-      `}</style>
     </div>
   );
 };

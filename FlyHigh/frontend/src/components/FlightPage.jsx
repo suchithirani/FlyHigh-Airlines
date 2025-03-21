@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import  { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Plane, Calendar, Clock, CreditCard, User, MapPin } from 'lucide-react';
 
 const FlightBookingPage = () => {
