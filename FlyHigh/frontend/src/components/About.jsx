@@ -4,6 +4,7 @@ import { FaPlane, FaMapMarkerAlt } from "react-icons/fa";
 import { IoIosRocket } from "react-icons/io";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
+// import FlightHighlights from "./FlightHighlights";
 
 const About = () => {
   const carouselSettings = {
@@ -212,6 +213,7 @@ const About = () => {
           Get in Touch
         </button>
       </section>
+      
     </div>
   );
 };

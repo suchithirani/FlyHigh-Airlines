@@ -23,6 +23,12 @@ export const NavbarMenu =[
     title:"Contact Us",
     link:"/machinaries/src/components/Contact.jsx",
     name:'Contact'
+  },
+  {
+    id:5,
+    title:"Air Port list",
+    link:"/machinaries/src/components/AirPortList.jsx",
+    name:'AirPortList'
   }
   
 ];

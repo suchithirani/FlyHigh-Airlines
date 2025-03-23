@@ -1,201 +1,730 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Search, Plane, MapPin, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
-import { Card, CardContent, TextField, Button, MenuItem, Select, InputLabel, FormControl, Rating } from '@mui/material';
-import destinations from '../mockData/Destination';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from "react";
+import { FaSearch, FaExchangeAlt, FaCaretDown, FaAngleLeft, FaAngleRight, FaPlane, FaLock, FaInfoCircle } from "react-icons/fa";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+import Filters from "./Filter";
+import BookFlights from "./BookFlights";
 
 const Home = () => {
-  const [departureDate, setDepartureDate] = useState('');
-  const [returnDate, setReturnDate] = useState('');
-  const [currency, setCurrency] = useState('USD');
-  const [selectedDestination, setSelectedDestination] = useState(null);
-  const carouselRef = useRef(null);
-  const navigate = useNavigate();
+  // State for form data
+  const [formData, setFormData] = useState({
+    from: "DEL - New Delhi",
+    to: "BOM - Mumbai",
+    departureDate: new Date(),
+    returnDate: null,
+    travellers: "1 Traveller, Economy",
+  });
 
-  const handleDestinationClick = (destination) => {
-    setSelectedDestination(destination === selectedDestination ? null : destination);
+  // State for trip type
+  const [tripType, setTripType] = useState("oneWay");
+
+  const handleCloseModal = () => {
+    setSelectedFlight(null);
   };
 
-  const scrollCarousel = (direction) => {
-    if (carouselRef.current) {
-      const scrollAmount = 120; // Approximate width of one item plus margin
-      const currentScroll = carouselRef.current.scrollLeft;
-      const newScroll = direction === 'left' 
-        ? currentScroll - scrollAmount 
-        : currentScroll + scrollAmount;
-      
-      carouselRef.current.scrollTo({
-        left: newScroll,
-        behavior: 'smooth'
-      });
+  // State for date tabs
+  const [sortBy, setSortBy] = useState("price");
+  const [showDropdown, setShowDropdown] = useState(false);
+
+  // State for search
+  const [hasSearched, setHasSearched] = useState(false);
+  const [searchResults, setSearchResults] = useState({
+    from: "DEL - New Delhi",
+    to: "BOM - Mumbai",
+  });
+
+  // State for travellers & class modal
+  const [travellers, setTravellers] = useState(1);
+  const [travelClass, setTravelClass] = useState("Economy");
+
+  // Airport options
+  const airports = [
+    "DEL - New Delhi",
+    "BOM - Mumbai",
+    "BLR - Bangalore",
+    "HYD - Hyderabad",
+    "CCU - Kolkata",
+    "MAA - Chennai",
+    "AMD - Ahmedabad",
+    "PNQ - Pune",
+    "GOI - Goa",
+    "JAI - Jaipur",
+  ];
+
+  // State for flights fetched from the backend
+  const [allFlights, setAllFlights] = useState([]);
+  const [displayedFlights, setDisplayedFlights] = useState([]);
+  const [selectedFlight, setSelectedFlight] = useState(null);
+
+  // Fetch flights from the backend API
+  useEffect(() => {
+    const fetchFlights = async () => {
+      try {
+        const response = await fetch("http://localhost:8081/api/flights");
+        if (!response.ok) {
+          throw new Error("Failed to fetch flights");
+        }
+        const data = await response.json();
+        setAllFlights(data);
+        setDisplayedFlights(data);
+      } catch (error) {
+        console.error("Error fetching flights:", error);
+      }
+    };
+
+    fetchFlights();
+  }, []);
+
+  // State for filters
+  const [timeFilters, setTimeFilters] = useState({
+    earlyMorning: false,
+    morning: false,
+    midDay: false,
+    night: false,
+  });
+
+  const [stops, setStops] = useState({
+    nonStop: false,
+    oneStop: false,
+  });
+
+  const [priceRange, setPriceRange] = useState({
+    min: 5273,
+    max: 17712,
+    current: 10000,
+  });
+
+  const [airlines, setAirlines] = useState([
+    { id: 1, name: "Air India", price: "₹5,465", selected: false },
+    { id: 2, name: "Air India Express", price: "₹7,083", selected: false },
+    { id: 3, name: "FlyHigh", price: "₹5,273", selected: false },
+    { id: 4, name: "IndiGo", price: "₹5,499", selected: false },
+    { id: 5, name: "SpiceJet", price: "₹6,201", selected: false },
+    { id: 6, name: "Vistara", price: "₹5,872", selected: false },
+    { id: 7, name: "Go Air", price: "₹5,399", selected: false },
+  ]);
+
+  // Handle time filter selection
+  const toggleTimeFilter = (filterName) => {
+    setTimeFilters((prev) => ({
+      ...prev,
+      [filterName]: !prev[filterName],
+    }));
+    filterFlights(allFlights);
+  };
+
+  // Handle airline filter selection
+  const toggleAirline = (airlineId) => {
+    setAirlines((prev) =>
+      prev.map((airline) =>
+        airline.id === airlineId
+          ? { ...airline, selected: !airline.selected }
+          : airline
+      )
+    );
+    filterFlights(allFlights);
+  };
+
+  // Handle stop filter selection
+  const toggleStop = (stopType) => {
+    setStops((prev) => ({
+      ...prev,
+      [stopType]: !prev[stopType],
+    }));
+    filterFlights(allFlights);
+  };
+
+  // Handle price range change
+  const handlePriceRangeChange = (newPriceRange) => {
+    setPriceRange(newPriceRange);
+    filterFlights(allFlights);
+  };
+
+  // Filter flights based on active filters
+  const filterFlights = (flights) => {
+    let filteredFlights = flights;
+
+    // Filter by time
+    const activeTimeFilters = Object.entries(timeFilters)
+      .filter(([, isActive]) => isActive)
+      .map(([filter]) => filter);
+
+    if (activeTimeFilters.length > 0) {
+      filteredFlights = filteredFlights.filter((flight) =>
+        activeTimeFilters.includes(flight.timeFilter)
+      );
+    }
+
+    // Filter by stops
+    if (stops.nonStop) {
+      filteredFlights = filteredFlights.filter(
+        (flight) => flight.type === "Non stop"
+      );
+    }
+    if (stops.oneStop) {
+      filteredFlights = filteredFlights.filter(
+        (flight) => flight.type === "1 Stop"
+      );
+    }
+
+    // Filter by price
+    filteredFlights = filteredFlights.filter(
+      (flight) => parseFloat(flight.ticketPrice) <= priceRange.current
+    );
+
+    // Filter by airlines
+    const selectedAirlines = airlines
+      .filter((airline) => airline.selected)
+      .map((airline) => airline.name);
+
+    if (selectedAirlines.length > 0) {
+      filteredFlights = filteredFlights.filter((flight) =>
+        selectedAirlines.includes(flight.airline.airlineName)
+      );
+    }
+
+    setDisplayedFlights(filteredFlights);
+  };
+
+  // Handle form submission (search)
+  const handleSearch = () => {
+    setHasSearched(true);
+    setSearchResults({
+      from: formData.from,
+      to: formData.to,
+    });
+  };
+
+  // Swap origin and destination
+  const swapLocations = () => {
+    setFormData({
+      ...formData,
+      from: formData.to,
+      to: formData.from,
+    });
+  };
+
+  // Handle travellers & class change
+  const handleTravellersChange = (type, value) => {
+    if (type === "travellers") {
+      setTravellers(value);
+    } else if (type === "class") {
+      setTravelClass(value);
     }
   };
 
-  function bookFlight() {
-    navigate('/booking');
-  }
+  // Update form data with travellers & class
+  const updateTravellers = () => {
+    setFormData({
+      ...formData,
+      travellers: `${travellers} Traveller${
+        travellers > 1 ? "s" : ""
+      }, ${travelClass}`,
+    });
+    setShowDropdown(false);
+  };
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
-      <header className="bg-blue-900 p-8 text-center">
-        <h1 className="text-5xl font-bold mb-4">Discover Your Next Adventure</h1>
-        <p className="text-xl text-blue-300">Fly to over 100+ destinations worldwide</p>
-      </header>
+    <div className="max-w-6xl mx-auto p-2 md:p-4">
+      {/* Search Form */}
+      <div className="bg-white rounded-lg shadow-md p-3 md:p-4 mb-4 md:mb-6">
+        {/* Trip Type Selector */}
+        <div className="flex mb-4 border border-gray-300 rounded-lg overflow-hidden w-fit">
+          <button
+            className={`px-4 py-2 text-sm md:text-base ${
+              tripType === "oneWay" ? "bg-orange-500 text-white" : "bg-gray-100"
+            }`}
+            onClick={() => setTripType("oneWay")}
+          >
+            One Way
+          </button>
+          <button
+            className={`px-4 py-2 text-sm md:text-base ${
+              tripType === "roundTrip"
+                ? "bg-orange-500 text-white"
+                : "bg-gray-100"
+            }`}
+            onClick={() => setTripType("roundTrip")}
+          >
+            Round Trip
+          </button>
+        </div>
 
-      <main className="container mx-auto px-4 mt-8">
-        <Card className="bg-blue-800 text-white p-8 shadow-xl rounded-lg">
-          <CardContent>
-            <h2 className="text-3xl font-semibold mb-4 text-center">Search Flights</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <TextField label="Departure City" variant="outlined" fullWidth InputProps={{ startAdornment: <MapPin className="mr-2 text-gray-400" /> }} />
-              <TextField label="Arrival City" variant="outlined" fullWidth InputProps={{ startAdornment: <MapPin className="mr-2 text-gray-400" /> }} />
-              <TextField label="Departure" type="date" variant="outlined" value={departureDate} onChange={(e) => setDepartureDate(e.target.value)} fullWidth InputLabelProps={{ shrink: true }} />
-              <TextField label="Return" type="date" variant="outlined" value={returnDate} onChange={(e) => setReturnDate(e.target.value)} fullWidth InputLabelProps={{ shrink: true }} />
+        <div className="flex flex-col md:flex-row flex-wrap gap-3 mb-4">
+          {/* From-To Fields */}
+          <div className="flex items-center gap-2 flex-grow">
+            <div className="flex flex-col flex-grow">
+              <label className="text-xs text-gray-500 mb-1">From</label>
+              <select
+                className="border border-gray-300 rounded p-2 text-sm"
+                value={formData.from}
+                onChange={(e) =>
+                  setFormData({ ...formData, from: e.target.value })
+                }
+              >
+                {airports.map((airport, index) => (
+                  <option key={index} value={airport}>
+                    {airport}
+                  </option>
+                ))}
+              </select>
             </div>
-            <div className="mt-6 text-center">
-              <Button variant="contained" className="px-8 py-3 bg-cyan-600 hover:bg-cyan-500">
-                <Search className="w-4 h-4 mr-2" />
-                Search Flights
-              </Button>
-            </div>
-            <FormControl fullWidth className="mt-6">
-              <InputLabel>Currency</InputLabel>
-              <Select value={currency} onChange={(e) => setCurrency(e.target.value)} label="Currency">
-                <MenuItem value="USD">USD</MenuItem>
-                <MenuItem value="EUR">EUR</MenuItem>
-                <MenuItem value="INR">INR</MenuItem>
-                <MenuItem value="GBP">GBP</MenuItem>
-              </Select>
-            </FormControl>
-          </CardContent>
-        </Card>
 
-        {/* Replaced Featured Destinations with Instagram Story-like carousel */}
-        <section className="mt-12">
-          <h2 className="text-3xl font-bold mb-6 text-center">Popular Destinations</h2>
-          
-          {/* Instagram Story-like Carousel */}
-          <div className="relative px-8">
-            <div 
-              ref={carouselRef}
-              className="flex overflow-x-auto pb-4 space-x-4 hide-scrollbar scroll-smooth snap-x"
+            <button
+              className="h-8 w-8 bg-gray-100 rounded-full flex items-center justify-center"
+              onClick={swapLocations}
             >
-              {destinations.map((dest) => (
-                <div 
-                  key={dest.id}
-                  className="flex-shrink-0 cursor-pointer transition-all duration-300 snap-center"
-                  onClick={() => handleDestinationClick(dest)}
-                >
-                  <div className={`w-24 h-24 rounded-full overflow-hidden border-4 flex items-center justify-center relative ${selectedDestination === dest ? 'border-cyan-400 scale-110' : 'border-blue-500'}`}>
-                    <div className="absolute inset-0 bg-gradient-to-b from-transparent to-blue-900 opacity-70"></div>
-                    <div className="relative z-10 text-white font-bold text-xl">{dest.code}</div>
-                  </div>
-                </div>
-              ))}
+              <FaExchangeAlt className="text-gray-500" />
+            </button>
+
+            <div className="flex flex-col flex-grow">
+              <label className="text-xs text-gray-500 mb-1">To</label>
+              <select
+                className="border border-gray-300 rounded p-2 text-sm"
+                value={formData.to}
+                onChange={(e) =>
+                  setFormData({ ...formData, to: e.target.value })
+                }
+              >
+                {airports.map((airport, index) => (
+                  <option key={index} value={airport}>
+                    {airport}
+                  </option>
+                ))}
+              </select>
             </div>
-            
-            {/* Left/Right navigation arrows */}
-            <button 
-              className="absolute left-0 top-1/2 transform -translate-y-1/2 bg-blue-800 bg-opacity-70 hover:bg-opacity-90 rounded-full p-2 text-white transition-all duration-200 shadow-lg"
-              onClick={() => scrollCarousel('left')}
-            >
-              <ChevronLeft className="w-6 h-6" />
-            </button>
-            <button 
-              className="absolute right-0 top-1/2 transform -translate-y-1/2 bg-blue-800 bg-opacity-70 hover:bg-opacity-90 rounded-full p-2 text-white transition-all duration-200 shadow-lg"
-              onClick={() => scrollCarousel('right')}
-            >
-              <ChevronRight className="w-6 h-6" />
-            </button>
           </div>
-          
-          {/* Expanded destination view */}
-          {selectedDestination && (
-            <div className="mt-8 bg-blue-700 rounded-lg overflow-hidden transition-all duration-500 transform animate-fadeIn shadow-xl">
-              <div className="relative">
-                <div className="w-full h-64 md:h-80 bg-cover bg-center" style={{ backgroundImage: `url(${selectedDestination.image})` }}></div>
-                <div className="absolute inset-0 bg-gradient-to-t from-blue-900 to-transparent opacity-70"></div>
-                <div className="absolute bottom-0 left-0 p-6">
-                  <h3 className="text-3xl font-bold text-white">{selectedDestination.name}</h3>
-                  <p className="text-xl text-blue-200">From ${selectedDestination.price}</p>
-                </div>
-                <div className="absolute top-4 right-4">
-                  <Button 
-                    variant="contained" 
-                    className="bg-blue-500 hover:bg-blue-400"
-                    onClick={bookFlight}
-                  >
-                    <Plane className="w-4 h-4 mr-2" />
-                    Book Now
-                  </Button>
-                </div>
-              </div>
-              <div className="p-6">
-                <p className="text-white">Experience the beauty and charm of {selectedDestination.name}. Book your flight today and enjoy special discounts!</p>
-                <div className="mt-2 flex items-center">
-                  <Rating value={4.5} readOnly size="small" />
-                  <span className="ml-2 text-blue-300">(4.5)</span>
-                </div>
-                
-                {/* Image carousel for selected destination */}
-                <div className="mt-6">
-                  <h4 className="text-xl font-semibold mb-3">Gallery</h4>
-                  <div className="relative">
-                    <div className="flex space-x-3 overflow-x-auto pb-4 hide-scrollbar">
-                      {[1, 2, 3, 4].map((_, idx) => (
-                        <div key={idx} className="flex-shrink-0 w-40 h-24 rounded-lg overflow-hidden">
-                          <div className="w-full h-full bg-blue-400">
-                            {/* Placeholder for destination images */}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
+
+          {/* Departure Date */}
+          <div className="flex flex-col w-full md:w-auto md:flex-grow">
+            <label className="text-xs text-gray-500 mb-1">Departure</label>
+            <DatePicker
+              selected={formData.departureDate}
+              onChange={(date) =>
+                setFormData({ ...formData, departureDate: date })
+              }
+              className="border border-gray-300 rounded p-2 text-sm w-full"
+              minDate={new Date()}
+            />
+          </div>
+
+          {/* Return Date - Only shown for Round Trip */}
+          {tripType === "roundTrip" && (
+            <div className="flex flex-col w-full md:w-auto md:flex-grow">
+              <label className="text-xs text-gray-500 mb-1">Return</label>
+              <DatePicker
+                selected={formData.returnDate}
+                onChange={(date) =>
+                  setFormData({ ...formData, returnDate: date })
+                }
+                className="border border-gray-300 rounded p-2 text-sm w-full"
+                minDate={formData.departureDate}
+                placeholderText="Select Return Date"
+              />
             </div>
           )}
-        </section>
-      </main>
 
-      <footer className="bg-blue-950 text-white py-12 mt-12">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <div>
-              <h3 className="font-bold mb-4">About Us</h3>
-              <ul className="space-y-2">
-                <li>Our Story</li>
-                <li>Careers</li>
-                <li>Press</li>
-              </ul>
+          {/* Travellers & Class Section */}
+          <div className="flex flex-col w-full md:w-auto md:flex-grow relative">
+            <label className="text-xs text-gray-500 mb-1">
+              Travellers & Class
+            </label>
+            <button
+              className="border border-gray-300 rounded p-2 text-sm text-left flex items-center justify-between"
+              onClick={() => setShowDropdown(!showDropdown)}
+            >
+              <span>{formData.travellers}</span>
+              <FaCaretDown className="text-gray-500" />
+            </button>
+
+            {/* Dropdown for Travellers & Class */}
+            {showDropdown && (
+              <div className="absolute top-full left-0 mt-1 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
+                <div className="p-4">
+                  {/* Travellers */}
+                  <div className="mb-4">
+                    <label className="text-sm text-gray-600 mb-2">
+                      Travellers
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <button
+                        className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center hover:bg-gray-200 transition-colors"
+                        onClick={() =>
+                          handleTravellersChange("travellers", travellers - 1)
+                        }
+                        disabled={travellers === 1}
+                      >
+                        -
+                      </button>
+                      <span>{travellers}</span>
+                      <button
+                        className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center hover:bg-gray-200 transition-colors"
+                        onClick={() =>
+                          handleTravellersChange("travellers", travellers + 1)
+                        }
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Class */}
+                  <div className="mb-4">
+                    <label className="text-sm text-gray-600 mb-2">Class</label>
+                    <div className="flex flex-col gap-2">
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="radio"
+                          name="class"
+                          value="Economy"
+                          checked={travelClass === "Economy"}
+                          onChange={() =>
+                            handleTravellersChange("class", "Economy")
+                          }
+                        />
+                        Economy
+                      </label>
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="radio"
+                          name="class"
+                          value="Business"
+                          checked={travelClass === "Business"}
+                          onChange={() =>
+                            handleTravellersChange("class", "Business")
+                          }
+                        />
+                        Business
+                      </label>
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="radio"
+                          name="class"
+                          value="First Class"
+                          checked={travelClass === "First Class"}
+                          onChange={() =>
+                            handleTravellersChange("class", "First Class")
+                          }
+                        />
+                        First Class
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex justify-end gap-2">
+                    <button
+                      className="bg-gray-100 text-gray-700 px-4 py-2 rounded hover:bg-gray-200 transition-colors"
+                      onClick={() => setShowDropdown(false)}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      className="bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600 transition-colors"
+                      onClick={updateTravellers}
+                    >
+                      Apply
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Search Button */}
+          <button
+            className="bg-orange-500 text-white font-bold py-2 px-4 rounded flex items-center justify-center gap-2 w-full md:w-auto"
+            onClick={handleSearch}
+          >
+            Search <FaSearch />
+          </button>
+        </div>
+
+        {/* Special Fares */}
+        <div className="flex flex-wrap items-center gap-2 md:gap-4">
+          <span className="text-sm text-gray-700">
+            Special Fares (Optional):
+          </span>
+          <div className="flex flex-wrap gap-2">
+            <button className="border border-gray-300 rounded-full px-3 py-1 text-xs md:text-sm">
+              Student
+            </button>
+            <button className="border border-gray-300 rounded-full px-3 py-1 text-xs md:text-sm">
+              Senior Citizen
+            </button>
+            <button className="border border-gray-300 rounded-full px-3 py-1 text-xs md:text-sm">
+              Armed Forces
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Search results notification */}
+      {hasSearched && (
+        <div className="text-sm font-medium mb-3">
+          Showing flights from {searchResults.from.split(" - ")[1]} to{" "}
+          {searchResults.to.split(" - ")[1]}
+        </div>
+      )}
+
+      {/* Main Content */}
+      <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
+        {/* Filters Sidebar */}
+        <Filters
+          timeFilters={timeFilters}
+          toggleTimeFilter={toggleTimeFilter}
+          airlines={airlines}
+          toggleAirline={toggleAirline}
+          stops={stops}
+          toggleStop={toggleStop}
+          priceRange={priceRange}
+          setPriceRange={handlePriceRangeChange}
+          sortBy={sortBy}
+          setSortBy={setSortBy}
+        />
+
+        {/* Flight Results */}
+        <div className="flex-1">
+          {/* Date Tabs */}
+          <div className="flex bg-white rounded-t-lg overflow-hidden overflow-x-auto">
+            <button className="px-2 bg-gray-100 flex items-center">
+              <FaAngleLeft />
+            </button>
+
+            <button className="px-2 bg-gray-100 flex items-center">
+              <FaAngleRight />
+            </button>
+          </div>
+
+          {/* Sort Options */}
+          <div className="flex flex-wrap items-center bg-white border-t border-gray-200 p-3">
+            <span className="text-sm text-gray-600 mr-4 w-full md:w-auto mb-2 md:mb-0">
+              Sort by
+            </span>
+
+            <div className="flex flex-1 overflow-x-auto">
+              <button
+                className={`flex-1 text-center py-2 ${
+                  sortBy === "price"
+                    ? "border-b-2 border-orange-500 text-orange-500"
+                    : ""
+                }`}
+                onClick={() => setSortBy("price")}
+              >
+                <div className="whitespace-nowrap">Price</div>
+                <div className="text-xs text-gray-500 whitespace-nowrap">
+                  Low to High
+                </div>
+              </button>
+
+              <button
+                className={`flex-1 text-center py-2 ${
+                  sortBy === "fastest"
+                    ? "border-b-2 border-orange-500 text-orange-500"
+                    : ""
+                }`}
+                onClick={() => setSortBy("fastest")}
+              >
+                <div className="whitespace-nowrap">Fastest</div>
+                <div className="text-xs text-gray-500 whitespace-nowrap">
+                  Shortest First
+                </div>
+              </button>
+
+              <button
+                className={`flex-1 text-center py-2 ${
+                  sortBy === "departure"
+                    ? "border-b-2 border-orange-500 text-orange-500"
+                    : ""
+                }`}
+                onClick={() => setSortBy("departure")}
+              >
+                <div className="whitespace-nowrap">Departure</div>
+                <div className="text-xs text-gray-500 whitespace-nowrap">
+                  Earliest First
+                </div>
+              </button>
+
+              <button
+                className={`flex-1 text-center py-2 ${
+                  sortBy === "smart"
+                    ? "border-b-2 border-orange-500 text-orange-500"
+                    : ""
+                }`}
+                onClick={() => setSortBy("smart")}
+              >
+                <div className="whitespace-nowrap">Smart</div>
+                <div className="text-xs text-gray-500 whitespace-nowrap">
+                  Recommended
+                </div>
+              </button>
             </div>
-            <div>
-              <h3 className="font-bold mb-4">Help</h3>
-              <ul className="space-y-2">
-                <li>FAQs</li>
-                <li>Contact Us</li>
-                <li>Support</li>
-              </ul>
+          </div>
+
+          {/* Flight Cards */}
+          <div className="bg-gray-100 p-4 rounded-b-lg">
+            <div className="text-sm text-gray-600 mb-4">
+              {displayedFlights.length} Flights Available
             </div>
-            <div>
-              <h3 className="font-bold mb-4">Legal</h3>
-              <ul className="space-y-2">
-                <li>Privacy Policy</li>
-                <li>Terms of Service</li>
-                <li>Cookie Policy</li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="font-bold mb-4">Connect</h3>
-              <ul className="space-y-2">
-                <li>Facebook</li>
-                <li>Twitter</li>
-                <li>Instagram</li>
-              </ul>
+
+            {displayedFlights.length > 0 ? (
+              displayedFlights.map((flight) => (
+                <div
+                  key={flight.flightId}
+                  className="bg-white rounded-lg mb-4 p-3 relative"
+                >
+                  {/* Tags */}
+                  {flight.cheapest && (
+                    <div className="absolute top-0 left-0 bg-blue-500 text-white text-xs px-2 py-1 rounded-tl-lg">
+                      Cheapest
+                    </div>
+                  )}
+
+                  {flight.bestSeller && (
+                    <div className="absolute top-0 left-0 bg-green-500 text-white text-xs px-2 py-1 rounded-tl-lg">
+                      Best Seller
+                    </div>
+                  )}
+
+                  {flight.freeMeal && (
+                    <div className="absolute top-4 left-0 bg-amber-100 text-amber-800 text-xs px-2 py-1">
+                      🍽 Free Meal
+                    </div>
+                  )}
+
+                  {/* Flight Details */}
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-3">
+                    {/* Airline Info */}
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                          flight.airline.airlineName === "FlyHigh"
+                            ? "bg-blue-500 text-white"
+                            : "bg-red-500 text-white"
+                        }`}
+                      >
+                        {flight.airline.airlineName === "FlyHigh" ? (
+                          <FaPlane />
+                        ) : (
+                          flight.airline.airlineName.charAt(0)
+                        )}
+                      </div>
+                      <div>
+                        <div className="font-medium">
+                          {flight.airline.airlineName}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {flight.flightNumber}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-1 justify-between items-center">
+                      {/* Departure */}
+                      <div className="text-center">
+                        <div className="text-lg font-medium">
+                          {new Date(flight.departureTime).toLocaleString()}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {flight.route.originAirport.airportCode}
+                        </div>
+                      </div>
+
+                      {/* Duration */}
+                      <div className="flex flex-col items-center">
+                        <div className="text-sm text-gray-500">
+                          {flight.route.flightTime} mins
+                        </div>
+                        <div className="relative w-16 md:w-24 h-px bg-gray-300 my-1">
+                          <div className="absolute -top-1 right-0 text-xs">
+                            ✈
+                          </div>
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {flight.route.distance} km
+                        </div>
+                      </div>
+
+                      {/* Arrival */}
+                      <div className="text-center">
+                        <div className="text-lg font-medium">
+                          {new Date(flight.arrivalTime).toLocaleTimeString()}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {flight.route.destinationAirport.airportCode}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Price */}
+                    <div className="text-right">
+                      <div className="text-lg font-medium">
+                        ₹{flight.ticketPrice.toLocaleString()}
+                      </div>
+                      <div className="text-xs text-green-600">
+                        Extra ₹{Math.floor(Math.random() * 300)} Off
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex flex-wrap md:flex-nowrap items-center justify-between border-t border-gray-200 pt-3 gap-2">
+                    <div className="text-xs flex items-center gap-1">
+                      <FaLock className="text-gray-500" />
+                      <span>Lock Price @₹299</span>
+                    </div>
+
+                    <button
+                      className="bg-blue-600 text-white py-2 px-4 md:px-6 rounded order-last md:order-none w-full md:w-auto"
+                      onClick={() => setSelectedFlight(flight)}
+                    >
+                      Book
+                    </button>
+
+                    <div className="text-xs flex items-center gap-1 text-blue-500 cursor-pointer">
+                      <span>Flight Details</span>
+                      <FaInfoCircle />
+                    </div>
+                  </div>
+
+                  {/* Render BookFlights component inline */}
+                  <div>
+      {/* Render flight list or other content */}
+      {selectedFlight && (
+        <BookFlights flight={selectedFlight} onClose={handleCloseModal} />
+      )}
+    </div>
+                </div>
+              ))
+            ) : (
+              <div className="bg-white rounded-lg p-6 text-center">
+                <p className="text-lg text-gray-600 mb-2">
+                  No flights found matching your filters
+                </p>
+                <p className="text-sm text-gray-500">
+                  Try adjusting your search criteria or filters
+                </p>
+              </div>
+            )}
+
+            {/* Promo Banner */}
+            <div className="bg-orange-500 text-white rounded-lg p-4 flex flex-col md:flex-row justify-between items-center gap-4">
+              <div>
+                <h3 className="font-bold mb-1">
+                  Unlock exclusive 12% Off on your first booking.
+                </h3>
+                <p>Code: NEW</p>
+              </div>
+              <div className="flex items-center gap-4">
+                <FaPlane className="text-2xl hidden md:block" />
+                <button className="bg-white text-orange-500 px-4 py-2 rounded w-full md:w-auto">
+                  Log in
+                </button>
+              </div>
             </div>
           </div>
         </div>
-      </footer>
+      </div>
     </div>
   );
 };

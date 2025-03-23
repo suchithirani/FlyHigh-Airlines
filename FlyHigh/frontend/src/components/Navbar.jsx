@@ -8,6 +8,7 @@ import Home from './Home';
 import Flight from './Flight';
 import Contact from './Contact';
 import About from './About';
+import AirportList from './AirPortList';
 
 function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -164,6 +165,7 @@ function Navbar() {
             <Route path="/flights" element={<Flight />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/about" element={<About />} />
+            <Route path="/airportlist" element={<AirportList />} />
           </Routes>
         </main>
       </Router>

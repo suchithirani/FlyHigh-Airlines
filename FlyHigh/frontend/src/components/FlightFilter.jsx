@@ -1,152 +1,348 @@
-import { useState } from 'react';
-import { SlidersHorizontal, X, Check, Clock } from 'lucide-react';
+import { useState } from "react";
+import { Filter, X, ChevronDown, Check } from "lucide-react";
 
-const FilterSection = () => {
-  const [showFilters, setShowFilters] = useState(false);
-  const [filterType, setFilterType] = useState("all");
-  const [timeFilter, setTimeFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("all");
-  
-  const timeRanges = [
-    { id: 'all', label: 'All Times' },
-    { id: 'morning', label: 'Morning (6AM-12PM)' },
-    { id: 'afternoon', label: 'Afternoon (12PM-6PM)' },
-    { id: 'evening', label: 'Evening (6PM-12AM)' },
-    { id: 'night', label: 'Night (12AM-6AM)' }
-  ];
-
-  const getActiveFilterCount = () => {
-    let count = 0;
-    if (filterType !== "all") count++;
-    if (timeFilter !== "all") count++;
-    if (statusFilter !== "all") count++;
-    
-    return count;
-  };
-  const FilterButton = ({ active, onClick, children }) => (
-    <button
-      onClick={onClick}
-      className={`px-4 rounded-lg mr-2 transition-all duration-300 
-        ${active ? 
-          "bg-blue-500 text-white shadow-lg scale-105" : 
-          "bg-gray-100 hover:bg-gray-200 hover:scale-102"
-        } flex items-center gap-2 pointer-events-none`}
-    >
-      {active && <Check className="w-4 h-4" />}
-      {children}
-    </button>
-  );
+const FilterDropdown = ({ title, options, selected, onChange, clearFilter }) => {
+  const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <div className="absolute inline-block z-1">
+    <div className="relative">
       <button
-        onClick={() => setShowFilters(!showFilters)}
-        className="flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-gray-50 
-          transition-all duration-300 hover:shadow-md ml-36 mt-2"
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center justify-between w-full px-3 py-2 text-sm border rounded-md bg-white hover:bg-gray-50"
       >
-        <SlidersHorizontal className={`w-3 h-4 transition-transform duration-300 
-          ${showFilters ? 'rotate-180' : ''}`} />
-        Filters
-        {getActiveFilterCount() > 0 && (
-          <span className="bg-blue-500 text-white text-xs px-2 py-1 rounded-full -ml-1 
-            animate-bounce">
-            {getActiveFilterCount()}
-          </span>
-        )}
+        <span className="flex items-center gap-2">
+          {title}
+          {selected.length > 0 && (
+            <span className="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded-full">
+              {selected.length}
+            </span>
+          )}
+        </span>
+        <ChevronDown className="w-4 h-4" />
       </button>
-      
-      <div className={`mt-2 rounded-lg border bg-white shadow-lg transition-all duration-300 
-        ${showFilters ? 
-          'opacity-100 transform translate-y-0' : 
-          'opacity-0 transform -translate-y-4'}`}
-      >
-        <div className="p-4 space-y-4">
-          {/* Flight Type Filters */}
-          <div className="space-y-2">
-            <h3 className="text-sm font-semibold text-gray-600">Flight Type</h3>
-            <div className="flex flex-wrap gap-2">
-              <FilterButton 
-                active={filterType === "all"} 
-                onClick={() => setFilterType("all")}
-              >
-                All Flights
-              </FilterButton>
-              <FilterButton 
-                active={filterType === "departure"} 
-                onClick={() => setFilterType("departure")}
-              >
-                Departures
-              </FilterButton>
-              <FilterButton 
-                active={filterType === "arrival"} 
-                onClick={() => setFilterType("arrival")}
-              >
-                Arrivals
-              </FilterButton>
-            </div>
-          </div>
 
-          {/* Time Range Filters */}
-          <div className="space-y-2">
-            <h3 className="text-sm font-semibold text-gray-600">Time Range</h3>
-            <div className="flex flex-wrap gap-2">
-              {timeRanges.map(range => (
-                <FilterButton
-                  key={range.id}
-                  active={timeFilter === range.id}
-                  onClick={() => setTimeFilter(range.id)}
-                >
-                  <Clock className="w-4 h-4" />
-                  {range.label}
-                </FilterButton>
-              ))}
-            </div>
+      {isOpen && (
+        <div className="absolute z-10 mt-1 w-56 bg-white border rounded-md shadow-lg">
+          <div className="p-2 border-b flex justify-between items-center">
+            <span className="text-xs font-medium text-gray-500">{title} Options</span>
+            {selected.length > 0 && (
+              <button
+                onClick={clearFilter}
+                className="text-xs text-gray-500 hover:text-red-500"
+              >
+                Clear
+              </button>
+            )}
           </div>
-
-          {/* Status Filters */}
-          <div className="space-y-2">
-            <h3 className="text-sm font-semibold text-gray-600">Flight Status</h3>
-            <div className="flex flex-wrap gap-2">
-              <FilterButton 
-                active={statusFilter === "all"} 
-                onClick={() => setStatusFilter("all")}
-              >
-                All Status
-              </FilterButton>
-              <FilterButton 
-                active={statusFilter === "ontime"} 
-                onClick={() => setStatusFilter("ontime")}
-              >
-                On Time
-              </FilterButton>
-              <FilterButton 
-                active={statusFilter === "delayed"} 
-                onClick={() => setStatusFilter("delayed")}
-              >
-                Delayed
-              </FilterButton>
-            </div>
-          </div>
-
-          {/* Reset Button */}
-          <div className="pt-2 border-t">
-            <button
-              onClick={() => {
-                setFilterType("all");
-                setTimeFilter("all");
-                setStatusFilter("all");
-              }}
-              className="text-sm text-red-500 hover:text-red-600 transition-colors duration-300 
-                flex items-center gap-1"
-            >
-              <X className="w-4 h-4" />
-              Reset Filters
-            </button>
+          <div className="max-h-60 overflow-y-auto p-2">
+            {options.map((option) => (
+              <label key={option.value} className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                  checked={selected.includes(option.value)}
+                  onChange={() => {
+                    const newSelected = selected.includes(option.value)
+                      ? selected.filter(item => item !== option.value)
+                      : [...selected, option.value];
+                    onChange(newSelected);
+                  }}
+                />
+                <span className="text-sm">{option.label}</span>
+              </label>
+            ))}
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
 
-export default FilterSection;
+const RangeFilter = ({ title, min, max, value, onChange, clearFilter }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const hasFilter = value[0] !== min || value[1] !== max;
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center justify-between w-full px-3 py-2 text-sm border rounded-md bg-white hover:bg-gray-50"
+      >
+        <span className="flex items-center gap-2">
+          {title}
+          {hasFilter && (
+            <span className="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded-full">
+              Active
+            </span>
+          )}
+        </span>
+        <ChevronDown className="w-4 h-4" />
+      </button>
+
+      {isOpen && (
+        <div className="absolute z-10 mt-1 w-64 bg-white border rounded-md shadow-lg">
+          <div className="p-2 border-b flex justify-between items-center">
+            <span className="text-xs font-medium text-gray-500">{title} Range</span>
+            {hasFilter && (
+              <button
+                onClick={clearFilter}
+                className="text-xs text-gray-500 hover:text-red-500"
+              >
+                Reset
+              </button>
+            )}
+          </div>
+          <div className="p-4">
+            <div className="flex justify-between mb-2">
+              <span className="text-xs text-gray-500">₹{value[0].toLocaleString()}</span>
+              <span className="text-xs text-gray-500">₹{value[1].toLocaleString()}</span>
+            </div>
+            <div className="flex gap-4">
+              <input
+                type="range"
+                min={min}
+                max={max}
+                value={value[0]}
+                onChange={(e) => onChange([parseInt(e.target.value), value[1]])}
+                className="w-full"
+              />
+              <input
+                type="range"
+                min={min}
+                max={max}
+                value={value[1]}
+                onChange={(e) => onChange([value[0], parseInt(e.target.value)])}
+                className="w-full"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const FlightFilters = ({ onApplyFilters }) => {
+  // Sample filter options - these would be generated from actual flight data
+  const airlines = [
+    { value: "indigo", label: "IndiGo" },
+    { value: "airIndia", label: "Air India" },
+    { value: "vistara", label: "Vistara" },
+    { value: "spiceJet", label: "SpiceJet" },
+    { value: "goFirst", label: "Go First" },
+    { value: "airAsia", label: "Air Asia India" },
+  ];
+
+  const airports = [
+    { value: "del", label: "Delhi (DEL)" },
+    { value: "bom", label: "Mumbai (BOM)" },
+    { value: "blr", label: "Bangalore (BLR)" },
+    { value: "hyd", label: "Hyderabad (HYD)" },
+    { value: "maa", label: "Chennai (MAA)" },
+    { value: "ccu", label: "Kolkata (CCU)" },
+  ];
+
+  const statuses = [
+    { value: "onTime", label: "On Time" },
+    { value: "delayed", label: "Delayed" },
+    { value: "boarding", label: "Boarding" },
+    { value: "landed", label: "Landed" },
+    { value: "cancelled", label: "Cancelled" },
+  ];
+
+  // Filter states
+  const [selectedAirlines, setSelectedAirlines] = useState([]);
+  const [selectedOrigins, setSelectedOrigins] = useState([]);
+  const [selectedDestinations, setSelectedDestinations] = useState([]);
+  const [selectedStatuses, setSelectedStatuses] = useState([]);
+  const [priceRange, setPriceRange] = useState([2000, 20000]);
+  const [isFiltersVisible, setIsFiltersVisible] = useState(false);
+
+  const handleApplyFilters = () => {
+    const filters = {
+      airlines: selectedAirlines,
+      origins: selectedOrigins,
+      destinations: selectedDestinations,
+      statuses: selectedStatuses,
+      priceRange: priceRange
+    };
+    
+    onApplyFilters(filters);
+    setIsFiltersVisible(false);
+  };
+
+  const handleResetFilters = () => {
+    setSelectedAirlines([]);
+    setSelectedOrigins([]);
+    setSelectedDestinations([]);
+    setSelectedStatuses([]);
+    setPriceRange([2000, 20000]);
+    onApplyFilters({}); // Reset filters
+  };
+
+  const activeFilterCount = 
+    (selectedAirlines.length > 0 ? 1 : 0) +
+    (selectedOrigins.length > 0 ? 1 : 0) +
+    (selectedDestinations.length > 0 ? 1 : 0) +
+    (selectedStatuses.length > 0 ? 1 : 0) +
+    (priceRange[0] !== 2000 || priceRange[1] !== 20000 ? 1 : 0);
+
+  return (
+    <div className="mb-6">
+      <button
+        onClick={() => setIsFiltersVisible(!isFiltersVisible)}
+        className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-md bg-white hover:bg-gray-50 mb-3"
+      >
+        <Filter className="w-4 h-4" />
+        <span>Filters</span>
+        {activeFilterCount > 0 && (
+          <span className="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded-full">
+            {activeFilterCount}
+          </span>
+        )}
+      </button>
+
+      {isFiltersVisible && (
+        <div className="bg-white border rounded-lg p-4 shadow-md mb-4">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="font-medium">Filter Flights</h3>
+            <button
+              onClick={() => setIsFiltersVisible(false)}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-4">
+            <FilterDropdown
+              title="Airlines"
+              options={airlines}
+              selected={selectedAirlines}
+              onChange={setSelectedAirlines}
+              clearFilter={() => setSelectedAirlines([])}
+            />
+            
+            <FilterDropdown
+              title="Origin"
+              options={airports}
+              selected={selectedOrigins}
+              onChange={setSelectedOrigins}
+              clearFilter={() => setSelectedOrigins([])}
+            />
+            
+            <FilterDropdown
+              title="Destination"
+              options={airports}
+              selected={selectedDestinations}
+              onChange={setSelectedDestinations}
+              clearFilter={() => setSelectedDestinations([])}
+            />
+            
+            <FilterDropdown
+              title="Status"
+              options={statuses}
+              selected={selectedStatuses}
+              onChange={setSelectedStatuses}
+              clearFilter={() => setSelectedStatuses([])}
+            />
+            
+            <RangeFilter
+              title="Price"
+              min={2000}
+              max={20000}
+              value={priceRange}
+              onChange={setPriceRange}
+              clearFilter={() => setPriceRange([2000, 20000])}
+            />
+          </div>
+          
+          <div className="flex justify-end gap-3 pt-3 border-t">
+            <button
+              onClick={handleResetFilters}
+              className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 border border-gray-300 rounded-md"
+            >
+              Reset All
+            </button>
+            
+            <button
+              onClick={handleApplyFilters}
+              className="px-4 py-2 text-sm text-white bg-blue-600 hover:bg-blue-700 rounded-md"
+            >
+              Apply Filters
+            </button>
+          </div>
+
+          {activeFilterCount > 0 && (
+            <div className="mt-4 pt-3 border-t">
+              <p className="text-sm text-gray-500 mb-2">Active filters:</p>
+              <div className="flex flex-wrap gap-2">
+                {selectedAirlines.length > 0 && (
+                  <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded-full text-xs flex items-center">
+                    Airlines: {selectedAirlines.length}
+                    <button
+                      onClick={() => setSelectedAirlines([])}
+                      className="ml-1 text-blue-500 hover:text-blue-700"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                )}
+                
+                {selectedOrigins.length > 0 && (
+                  <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded-full text-xs flex items-center">
+                    Origins: {selectedOrigins.length}
+                    <button
+                      onClick={() => setSelectedOrigins([])}
+                      className="ml-1 text-blue-500 hover:text-blue-700"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                )}
+                
+                {selectedDestinations.length > 0 && (
+                  <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded-full text-xs flex items-center">
+                    Destinations: {selectedDestinations.length}
+                    <button
+                      onClick={() => setSelectedDestinations([])}
+                      className="ml-1 text-blue-500 hover:text-blue-700"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                )}
+                
+                {selectedStatuses.length > 0 && (
+                  <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded-full text-xs flex items-center">
+                    Statuses: {selectedStatuses.length}
+                    <button
+                      onClick={() => setSelectedStatuses([])}
+                      className="ml-1 text-blue-500 hover:text-blue-700"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                )}
+                
+                {(priceRange[0] !== 2000 || priceRange[1] !== 20000) && (
+                  <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded-full text-xs flex items-center">
+                    Price: ₹{priceRange[0].toLocaleString()} - ₹{priceRange[1].toLocaleString()}
+                    <button
+                      onClick={() => setPriceRange([2000, 20000])}
+                      className="ml-1 text-blue-500 hover:text-blue-700"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default FlightFilters;
