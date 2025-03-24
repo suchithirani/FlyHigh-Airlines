@@ -1,5 +1,14 @@
 import { useState, useEffect } from "react";
-import { FaSearch, FaExchangeAlt, FaCaretDown, FaAngleLeft, FaAngleRight, FaPlane, FaLock, FaInfoCircle } from "react-icons/fa";
+import {
+  FaSearch,
+  FaExchangeAlt,
+  FaCaretDown,
+  FaAngleLeft,
+  FaAngleRight,
+  FaPlane,
+  FaLock,
+  FaInfoCircle,
+} from "react-icons/fa";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import Filters from "./Filter";
@@ -10,6 +19,14 @@ const Home = () => {
   const [formData, setFormData] = useState({
     from: "DEL - New Delhi",
     to: "BOM - Mumbai",
+    departureDate: new Date(),
+    returnDate: null,
+    travellers: "1 Traveller, Economy",
+  });
+
+  const [formData1, setFormData1] = useState({
+    to: "DEL - New Delhi",
+    from: "BOM - Mumbai",
     departureDate: new Date(),
     returnDate: null,
     travellers: "1 Traveller, Economy",
@@ -37,19 +54,56 @@ const Home = () => {
   const [travellers, setTravellers] = useState(1);
   const [travelClass, setTravelClass] = useState("Economy");
 
-  // Airport options
-  const airports = [
-    "DEL - New Delhi",
-    "BOM - Mumbai",
-    "BLR - Bangalore",
-    "HYD - Hyderabad",
-    "CCU - Kolkata",
-    "MAA - Chennai",
-    "AMD - Ahmedabad",
-    "PNQ - Pune",
-    "GOI - Goa",
-    "JAI - Jaipur",
-  ];
+  // // Airport options
+  // const airports = [
+  //   "DEL - New Delhi",
+  //   "BOM - Mumbai",
+  //   "BLR - Bangalore",
+  //   "HYD - Hyderabad",
+  //   "CCU - Kolkata",
+  //   "MAA - Chennai",
+  //   "AMD - Ahmedabad",
+  //   "PNQ - Pune",
+  //   "GOI - Goa",
+  //   "JAI - Jaipur",
+  // ];
+
+  // State for airports
+  const [airports, setAirports] = useState([]);
+
+  // Fetch airports data from the backend API
+  useEffect(() => {
+    const fetchAirports = async () => {
+      try {
+        const response = await fetch("http://localhost:8081/api/airports");
+        if (!response.ok) {
+          throw new Error("Failed to fetch airports");
+        }
+        const data = await response.json();
+
+        // Format the data into "airportCode - city" format
+        const formattedAirports = data.map(
+          (airport) => `${airport.airportCode} - ${airport.city}`
+        );
+
+        // Set the formatted airports in state
+        setAirports(formattedAirports);
+
+        // Update the default "from" and "to" values if needed
+        if (formattedAirports.length > 0) {
+          setFormData((prev) => ({
+            ...prev,
+            from: formattedAirports[0], // Set the first airport as default "from"
+            to: formattedAirports[1] || formattedAirports[0], // Set the second airport as default "to"
+          }));
+        }
+      } catch (error) {
+        console.error("Error fetching airports:", error);
+      }
+    };
+
+    fetchAirports();
+  }, []);
 
   // State for flights fetched from the backend
   const [allFlights, setAllFlights] = useState([]);
@@ -187,12 +241,48 @@ const Home = () => {
   };
 
   // Handle form submission (search)
+  // Handle form submission (search)
   const handleSearch = () => {
     setHasSearched(true);
     setSearchResults({
       from: formData.from,
       to: formData.to,
     });
+
+    // Extract airport codes for outbound journey
+    const fromAirport = formData.from.split(" - ")[0]; // Extract airport code (e.g., "DEL")
+    const toAirport = formData.to.split(" - ")[0]; // Extract airport code (e.g., "BOM")
+
+    // Filter flights for outbound journey
+    const outboundFlights = allFlights.filter((flight) => {
+      return (
+        flight.route.originAirport.airportCode === fromAirport &&
+        flight.route.destinationAirport.airportCode === toAirport
+      );
+    });
+
+    // If trip type is roundTrip, filter flights for return journey
+    let returnFlights = [];
+    if (tripType === "roundTrip") {
+      const returnFromAirport = formData1.from.split(" - ")[0]; // Extract airport code (e.g., "BOM")
+      const returnToAirport = formData1.to.split(" - ")[0]; // Extract airport code (e.g., "DEL")
+
+      returnFlights = allFlights.filter((flight) => {
+        return (
+          flight.route.originAirport.airportCode === returnFromAirport &&
+          flight.route.destinationAirport.airportCode === returnToAirport
+        );
+      });
+    }
+
+    // Combine outbound and return flights for round trip
+    const filteredFlights =
+      tripType === "roundTrip"
+        ? [...outboundFlights, ...returnFlights]
+        : outboundFlights;
+
+    // Update the displayed flights
+    setDisplayedFlights(filteredFlights);
   };
 
   // Swap origin and destination
@@ -202,7 +292,37 @@ const Home = () => {
       from: formData.to,
       to: formData.from,
     });
+
+    if (tripType === "roundTrip") {
+      setFormData1({
+        ...formData1,
+        from: formData1.to,
+        to: formData1.from,
+      });
+    }
   };
+
+  // Fetch flights from the backend API (only once when the component mounts)
+  useEffect(() => {
+    const fetchFlights = async () => {
+      try {
+        const response = await fetch("http://localhost:8081/api/flights");
+        if (!response.ok) {
+          throw new Error("Failed to fetch flights");
+        }
+        const data = await response.json();
+        setAllFlights(data);
+
+        // Initially, display no flights until the user presses the search button
+        setDisplayedFlights([]);
+      } catch (error) {
+        console.error("Error fetching flights:", error);
+      }
+    };
+
+    fetchFlights();
+  }, []); // Empty dependency array ensures this runs only once on mount
+  // Swap origin and destination
 
   // Handle travellers & class change
   const handleTravellersChange = (type, value) => {
@@ -227,243 +347,255 @@ const Home = () => {
   return (
     <div className="max-w-6xl mx-auto p-2 md:p-4">
       {/* Search Form */}
-      <div className="bg-white rounded-lg shadow-md p-3 md:p-4 mb-4 md:mb-6">
-        {/* Trip Type Selector */}
-        <div className="flex mb-4 border border-gray-300 rounded-lg overflow-hidden w-fit">
-          <button
-            className={`px-4 py-2 text-sm md:text-base ${
-              tripType === "oneWay" ? "bg-orange-500 text-white" : "bg-gray-100"
-            }`}
-            onClick={() => setTripType("oneWay")}
-          >
-            One Way
-          </button>
-          <button
-            className={`px-4 py-2 text-sm md:text-base ${
-              tripType === "roundTrip"
-                ? "bg-orange-500 text-white"
-                : "bg-gray-100"
-            }`}
-            onClick={() => setTripType("roundTrip")}
-          >
-            Round Trip
-          </button>
-        </div>
-
-        <div className="flex flex-col md:flex-row flex-wrap gap-3 mb-4">
-          {/* From-To Fields */}
-          <div className="flex items-center gap-2 flex-grow">
-            <div className="flex flex-col flex-grow">
-              <label className="text-xs text-gray-500 mb-1">From</label>
-              <select
-                className="border border-gray-300 rounded p-2 text-sm"
-                value={formData.from}
-                onChange={(e) =>
-                  setFormData({ ...formData, from: e.target.value })
-                }
-              >
-                {airports.map((airport, index) => (
-                  <option key={index} value={airport}>
-                    {airport}
-                  </option>
-                ))}
-              </select>
-            </div>
-
+      <div className="max-w-6xl mx-auto p-2 md:p-4">
+        {/* Search Form */}
+        <div className="bg-white rounded-lg shadow-md p-3 md:p-4 mb-4 md:mb-6">
+          {/* Trip Type Selector */}
+          <div className="flex mb-4 border border-gray-300 rounded-lg overflow-hidden w-fit">
             <button
-              className="h-8 w-8 bg-gray-100 rounded-full flex items-center justify-center"
-              onClick={swapLocations}
+              className={`px-4 py-2 text-sm md:text-base ${
+                tripType === "oneWay"
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-100"
+              }`}
+              onClick={() => setTripType("oneWay")}
             >
-              <FaExchangeAlt className="text-gray-500" />
+              One Way
             </button>
+            <button
+              className={`px-4 py-2 text-sm md:text-base ${
+                tripType === "roundTrip"
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-100"
+              }`}
+              onClick={() => setTripType("roundTrip")}
+            >
+              Round Trip
+            </button>
+          </div>
 
-            <div className="flex flex-col flex-grow">
-              <label className="text-xs text-gray-500 mb-1">To</label>
-              <select
-                className="border border-gray-300 rounded p-2 text-sm"
-                value={formData.to}
-                onChange={(e) =>
-                  setFormData({ ...formData, to: e.target.value })
-                }
+          <div className="flex flex-col md:flex-row flex-wrap gap-3 mb-4">
+            {/* From-To Fields */}
+            <div className="flex items-center gap-2 flex-grow">
+              <div className="flex flex-col flex-grow">
+                <label className="text-xs text-gray-500 mb-1">From</label>
+                <select
+                  className="border border-gray-300 rounded p-2 text-sm"
+                  value={formData.from}
+                  onChange={(e) => {
+                    setFormData({ ...formData, from: e.target.value });
+                    if (tripType == "roundTrip") {
+                      setFormData1({ ...formData1, to: e.target.value });
+                    }
+                  }}
+                >
+                  {airports.map((airport, index) => (
+                    <option key={index} value={airport}>
+                      {airport}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <button
+                className="h-8 w-8 bg-gray-100 rounded-full flex items-center justify-center"
+                onClick={swapLocations}
               >
-                {airports.map((airport, index) => (
-                  <option key={index} value={airport}>
-                    {airport}
-                  </option>
-                ))}
-              </select>
+                <FaExchangeAlt className="text-gray-500" />
+              </button>
+
+              <div className="flex flex-col flex-grow">
+                <label className="text-xs text-gray-500 mb-1">To</label>
+                <select
+                  className="border border-gray-300 rounded p-2 text-sm"
+                  value={formData.to}
+                  onChange={(e) => {
+                    setFormData({ ...formData, to: e.target.value });
+                    if (tripType == "roundTrip") {
+                      setFormData1({ ...formData1, from: e.target.value });
+                    }
+                  }}
+                >
+                  {airports.map((airport, index) => (
+                    <option key={index} value={airport}>
+                      {airport}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
-          </div>
 
-          {/* Departure Date */}
-          <div className="flex flex-col w-full md:w-auto md:flex-grow">
-            <label className="text-xs text-gray-500 mb-1">Departure</label>
-            <DatePicker
-              selected={formData.departureDate}
-              onChange={(date) =>
-                setFormData({ ...formData, departureDate: date })
-              }
-              className="border border-gray-300 rounded p-2 text-sm w-full"
-              minDate={new Date()}
-            />
-          </div>
-
-          {/* Return Date - Only shown for Round Trip */}
-          {tripType === "roundTrip" && (
+            {/* Departure Date */}
             <div className="flex flex-col w-full md:w-auto md:flex-grow">
-              <label className="text-xs text-gray-500 mb-1">Return</label>
+              <label className="text-xs text-gray-500 mb-1">Departure</label>
               <DatePicker
-                selected={formData.returnDate}
+                selected={formData.departureDate}
                 onChange={(date) =>
-                  setFormData({ ...formData, returnDate: date })
+                  setFormData({ ...formData, departureDate: date })
                 }
                 className="border border-gray-300 rounded p-2 text-sm w-full"
-                minDate={formData.departureDate}
-                placeholderText="Select Return Date"
+                minDate={new Date()}
               />
             </div>
-          )}
 
-          {/* Travellers & Class Section */}
-          <div className="flex flex-col w-full md:w-auto md:flex-grow relative">
-            <label className="text-xs text-gray-500 mb-1">
-              Travellers & Class
-            </label>
-            <button
-              className="border border-gray-300 rounded p-2 text-sm text-left flex items-center justify-between"
-              onClick={() => setShowDropdown(!showDropdown)}
-            >
-              <span>{formData.travellers}</span>
-              <FaCaretDown className="text-gray-500" />
-            </button>
-
-            {/* Dropdown for Travellers & Class */}
-            {showDropdown && (
-              <div className="absolute top-full left-0 mt-1 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
-                <div className="p-4">
-                  {/* Travellers */}
-                  <div className="mb-4">
-                    <label className="text-sm text-gray-600 mb-2">
-                      Travellers
-                    </label>
-                    <div className="flex items-center gap-2">
-                      <button
-                        className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center hover:bg-gray-200 transition-colors"
-                        onClick={() =>
-                          handleTravellersChange("travellers", travellers - 1)
-                        }
-                        disabled={travellers === 1}
-                      >
-                        -
-                      </button>
-                      <span>{travellers}</span>
-                      <button
-                        className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center hover:bg-gray-200 transition-colors"
-                        onClick={() =>
-                          handleTravellersChange("travellers", travellers + 1)
-                        }
-                      >
-                        +
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Class */}
-                  <div className="mb-4">
-                    <label className="text-sm text-gray-600 mb-2">Class</label>
-                    <div className="flex flex-col gap-2">
-                      <label className="flex items-center gap-2">
-                        <input
-                          type="radio"
-                          name="class"
-                          value="Economy"
-                          checked={travelClass === "Economy"}
-                          onChange={() =>
-                            handleTravellersChange("class", "Economy")
-                          }
-                        />
-                        Economy
-                      </label>
-                      <label className="flex items-center gap-2">
-                        <input
-                          type="radio"
-                          name="class"
-                          value="Business"
-                          checked={travelClass === "Business"}
-                          onChange={() =>
-                            handleTravellersChange("class", "Business")
-                          }
-                        />
-                        Business
-                      </label>
-                      <label className="flex items-center gap-2">
-                        <input
-                          type="radio"
-                          name="class"
-                          value="First Class"
-                          checked={travelClass === "First Class"}
-                          onChange={() =>
-                            handleTravellersChange("class", "First Class")
-                          }
-                        />
-                        First Class
-                      </label>
-                    </div>
-                  </div>
-
-                  {/* Action Buttons */}
-                  <div className="flex justify-end gap-2">
-                    <button
-                      className="bg-gray-100 text-gray-700 px-4 py-2 rounded hover:bg-gray-200 transition-colors"
-                      onClick={() => setShowDropdown(false)}
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      className="bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600 transition-colors"
-                      onClick={updateTravellers}
-                    >
-                      Apply
-                    </button>
-                  </div>
-                </div>
+            {/* Return Date - Only shown for Round Trip */}
+            {tripType === "roundTrip" && (
+              <div className="flex flex-col w-full md:w-auto md:flex-grow">
+                <label className="text-xs text-gray-500 mb-1">Return</label>
+                <DatePicker
+                  selected={formData.returnDate}
+                  onChange={(date) =>
+                    setFormData({ ...formData, returnDate: date })
+                  }
+                  className="border border-gray-300 rounded p-2 text-sm w-full"
+                  minDate={formData.departureDate}
+                  placeholderText="Select Return Date"
+                />
               </div>
             )}
+
+            {/* Travellers & Class Section */}
+            <div className="flex flex-col w-full md:w-auto md:flex-grow relative">
+              <label className="text-xs text-gray-500 mb-1">
+                Travellers & Class
+              </label>
+              <button
+                className="border border-gray-300 rounded p-2 text-sm text-left flex items-center justify-between"
+                onClick={() => setShowDropdown(!showDropdown)}
+              >
+                <span>{formData.travellers}</span>
+                <FaCaretDown className="text-gray-500" />
+              </button>
+
+              {/* Dropdown for Travellers & Class */}
+              {showDropdown && (
+                <div className="absolute top-full left-0 mt-1 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
+                  <div className="p-4">
+                    {/* Travellers */}
+                    <div className="mb-4">
+                      <label className="text-sm text-gray-600 mb-2">
+                        Travellers
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <button
+                          className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center hover:bg-gray-200 transition-colors"
+                          onClick={() =>
+                            handleTravellersChange("travellers", travellers - 1)
+                          }
+                          disabled={travellers === 1}
+                        >
+                          -
+                        </button>
+                        <span>{travellers}</span>
+                        <button
+                          className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center hover:bg-gray-200 transition-colors"
+                          onClick={() =>
+                            handleTravellersChange("travellers", travellers + 1)
+                          }
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Class */}
+                    <div className="mb-4">
+                      <label className="text-sm text-gray-600 mb-2">
+                        Class
+                      </label>
+                      <div className="flex flex-col gap-2">
+                        <label className="flex items-center gap-2">
+                          <input
+                            type="radio"
+                            name="class"
+                            value="Economy"
+                            checked={travelClass === "Economy"}
+                            onChange={() =>
+                              handleTravellersChange("class", "Economy")
+                            }
+                          />
+                          Economy
+                        </label>
+                        <label className="flex items-center gap-2">
+                          <input
+                            type="radio"
+                            name="class"
+                            value="Business"
+                            checked={travelClass === "Business"}
+                            onChange={() =>
+                              handleTravellersChange("class", "Business")
+                            }
+                          />
+                          Business
+                        </label>
+                        <label className="flex items-center gap-2">
+                          <input
+                            type="radio"
+                            name="class"
+                            value="First Class"
+                            checked={travelClass === "First Class"}
+                            onChange={() =>
+                              handleTravellersChange("class", "First Class")
+                            }
+                          />
+                          First Class
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex justify-end gap-2">
+                      <button
+                        className="bg-gray-100 text-gray-700 px-4 py-2 rounded hover:bg-gray-200 transition-colors"
+                        onClick={() => setShowDropdown(false)}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-500 transition-colors"
+                        onClick={updateTravellers}
+                      >
+                        Apply
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Search Button */}
+            <button
+              className="bg-blue-600 text-white font-bold py-2 px-4 rounded flex items-center justify-center gap-2 w-full md:w-auto"
+              onClick={handleSearch}
+            >
+              Search <FaSearch />
+            </button>
           </div>
 
-          {/* Search Button */}
-          <button
-            className="bg-orange-500 text-white font-bold py-2 px-4 rounded flex items-center justify-center gap-2 w-full md:w-auto"
-            onClick={handleSearch}
-          >
-            Search <FaSearch />
-          </button>
-        </div>
-
-        {/* Special Fares */}
-        <div className="flex flex-wrap items-center gap-2 md:gap-4">
-          <span className="text-sm text-gray-700">
-            Special Fares (Optional):
-          </span>
-          <div className="flex flex-wrap gap-2">
-            <button className="border border-gray-300 rounded-full px-3 py-1 text-xs md:text-sm">
-              Student
-            </button>
-            <button className="border border-gray-300 rounded-full px-3 py-1 text-xs md:text-sm">
-              Senior Citizen
-            </button>
-            <button className="border border-gray-300 rounded-full px-3 py-1 text-xs md:text-sm">
-              Armed Forces
-            </button>
-          </div>
+        
         </div>
       </div>
 
       {/* Search results notification */}
-      {hasSearched && (
-        <div className="text-sm font-medium mb-3">
-          Showing flights from {searchResults.from.split(" - ")[1]} to{" "}
-          {searchResults.to.split(" - ")[1]}
+      {tripType === "oneway" && (
+        <div>
+          {hasSearched && (
+            <div className="text-sm font-medium mb-3">
+              Showing flights from {searchResults.from.split(" - ")[1]} to{" "}
+              {searchResults.to.split(" - ")[1]}
+            </div>
+          )}
+        </div>
+      )}
+      {tripType === "roundTrip" && (
+        <div>
+          {hasSearched && (
+            <div className="text-sm font-medium mb-3">
+              Showing flights from {searchResults.from.split(" - ")[1]} to{" "}
+              {searchResults.to.split(" - ")[1]} to{" "}
+              {searchResults.from.split(" - ")[1]}
+            </div>
+          )}
         </div>
       )}
 
@@ -506,7 +638,7 @@ const Home = () => {
               <button
                 className={`flex-1 text-center py-2 ${
                   sortBy === "price"
-                    ? "border-b-2 border-orange-500 text-orange-500"
+                    ? "border-b-2 border-blue-500 text-blue-600"
                     : ""
                 }`}
                 onClick={() => setSortBy("price")}
@@ -520,7 +652,7 @@ const Home = () => {
               <button
                 className={`flex-1 text-center py-2 ${
                   sortBy === "fastest"
-                    ? "border-b-2 border-orange-500 text-orange-500"
+                    ? "border-b-2 border-blue-500 text-blue-600"
                     : ""
                 }`}
                 onClick={() => setSortBy("fastest")}
@@ -534,7 +666,7 @@ const Home = () => {
               <button
                 className={`flex-1 text-center py-2 ${
                   sortBy === "departure"
-                    ? "border-b-2 border-orange-500 text-orange-500"
+                    ? "border-b-2 border-blue-500 text-blue-600"
                     : ""
                 }`}
                 onClick={() => setSortBy("departure")}
@@ -548,7 +680,7 @@ const Home = () => {
               <button
                 className={`flex-1 text-center py-2 ${
                   sortBy === "smart"
-                    ? "border-b-2 border-orange-500 text-orange-500"
+                    ? "border-b-2 border-blue-500 text-blue-600"
                     : ""
                 }`}
                 onClick={() => setSortBy("smart")}
@@ -560,169 +692,320 @@ const Home = () => {
               </button>
             </div>
           </div>
+          <table>
+            <tr>
+            <th>
+              {/* Flight Cards */}
+              <div className="bg-gray-100 p-4 rounded-b-lg">
+                <div className="text-sm text-gray-600 mb-4">
+                  {displayedFlights.length} Flights Available
+                </div>
 
-          {/* Flight Cards */}
-          <div className="bg-gray-100 p-4 rounded-b-lg">
-            <div className="text-sm text-gray-600 mb-4">
-              {displayedFlights.length} Flights Available
-            </div>
-
-            {displayedFlights.length > 0 ? (
-              displayedFlights.map((flight) => (
-                <div
-                  key={flight.flightId}
-                  className="bg-white rounded-lg mb-4 p-3 relative"
-                >
-                  {/* Tags */}
-                  {flight.cheapest && (
-                    <div className="absolute top-0 left-0 bg-blue-500 text-white text-xs px-2 py-1 rounded-tl-lg">
-                      Cheapest
-                    </div>
-                  )}
-
-                  {flight.bestSeller && (
-                    <div className="absolute top-0 left-0 bg-green-500 text-white text-xs px-2 py-1 rounded-tl-lg">
-                      Best Seller
-                    </div>
-                  )}
-
-                  {flight.freeMeal && (
-                    <div className="absolute top-4 left-0 bg-amber-100 text-amber-800 text-xs px-2 py-1">
-                      🍽 Free Meal
-                    </div>
-                  )}
-
-                  {/* Flight Details */}
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-3">
-                    {/* Airline Info */}
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                          flight.airline.airlineName === "FlyHigh"
-                            ? "bg-blue-500 text-white"
-                            : "bg-red-500 text-white"
-                        }`}
-                      >
-                        {flight.airline.airlineName === "FlyHigh" ? (
-                          <FaPlane />
-                        ) : (
-                          flight.airline.airlineName.charAt(0)
-                        )}
-                      </div>
-                      <div>
-                        <div className="font-medium">
-                          {flight.airline.airlineName}
+                {displayedFlights.length > 0 ? (
+                  displayedFlights.map((flight) => (
+                    <div
+                      key={flight.flightId}
+                      className="bg-white rounded-lg mb-4 p-3 relative"
+                    >
+                      {/* Tags */}
+                      {flight.cheapest && (
+                        <div className="absolute top-0 left-0 bg-blue-500 text-white text-xs px-2 py-1 rounded-tl-lg">
+                          Cheapest
                         </div>
-                        <div className="text-xs text-gray-500">
-                          {flight.flightNumber}
-                        </div>
-                      </div>
-                    </div>
+                      )}
 
-                    <div className="flex flex-1 justify-between items-center">
-                      {/* Departure */}
-                      <div className="text-center">
-                        <div className="text-lg font-medium">
-                          {new Date(flight.departureTime).toLocaleString()}
+                      {flight.bestSeller && (
+                        <div className="absolute top-0 left-0 bg-green-500 text-white text-xs px-2 py-1 rounded-tl-lg">
+                          Best Seller
                         </div>
-                        <div className="text-sm text-gray-500">
-                          {flight.route.originAirport.airportCode}
-                        </div>
-                      </div>
+                      )}
 
-                      {/* Duration */}
-                      <div className="flex flex-col items-center">
-                        <div className="text-sm text-gray-500">
-                          {flight.route.flightTime} mins
+                      {flight.freeMeal && (
+                        <div className="absolute top-4 left-0 bg-amber-100 text-amber-800 text-xs px-2 py-1">
+                          🍽 Free Meal
                         </div>
-                        <div className="relative w-16 md:w-24 h-px bg-gray-300 my-1">
-                          <div className="absolute -top-1 right-0 text-xs">
-                            ✈
+                      )}
+
+                      {/* Flight Details */}
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-3">
+                        {/* Airline Info */}
+                        <div className="flex items-center gap-3">
+                          <div
+                            className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                              flight.airline.airlineName === "FlyHigh"
+                                ? "bg-blue-500 text-white"
+                                : "bg-red-500 text-white"
+                            }`}
+                          >
+                            {flight.airline.airlineName === "FlyHigh" ? (
+                              <FaPlane />
+                            ) : (
+                              flight.airline.airlineName.charAt(0)
+                            )}
+                          </div>
+                          <div>
+                            <div className="font-medium">
+                              {flight.airline.airlineName}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {flight.flightNumber}
+                            </div>
                           </div>
                         </div>
-                        <div className="text-xs text-gray-500">
-                          {flight.route.distance} km
+
+                        <div className="flex flex-1 justify-between items-center">
+                          {/* Departure */}
+                          <div className="text-center">
+                            <div className="text-lg font-medium">
+                              {new Date(flight.departureTime).toLocaleString()}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              {flight.route.originAirport.airportCode}
+                            </div>
+                          </div>
+
+                          {/* Duration */}
+                          <div className="flex flex-col items-center">
+                            <div className="text-sm text-gray-500">
+                              {flight.route.flightTime} mins
+                            </div>
+                            <div className="relative w-16 md:w-24 h-px bg-gray-300 my-1">
+                              <div className="absolute -top-1 right-0 text-xs">
+                                ✈
+                              </div>
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {flight.route.distance} km
+                            </div>
+                          </div>
+
+                          {/* Arrival */}
+                          <div className="text-center">
+                            <div className="text-lg font-medium">
+                              {new Date(
+                                flight.arrivalTime
+                              ).toLocaleTimeString()}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              {flight.route.destinationAirport.airportCode}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Price */}
+                        <div className="text-right">
+                          <div className="text-lg font-medium">
+                            ₹{flight.ticketPrice.toLocaleString()}
+                          </div>
+                          <div className="text-xs text-green-600">
+                            Extra ₹{Math.floor(Math.random() * 300)} Off
+                          </div>
                         </div>
                       </div>
 
-                      {/* Arrival */}
-                      <div className="text-center">
-                        <div className="text-lg font-medium">
-                          {new Date(flight.arrivalTime).toLocaleTimeString()}
+                      {/* Action Buttons */}
+                      <div className="flex flex-wrap md:flex-nowrap items-center justify-between border-t border-gray-200 pt-3 gap-2">
+                        <div className="text-xs flex items-center gap-1">
+                          <FaLock className="text-gray-500" />
+                          <span>Lock Price @₹299</span>
                         </div>
-                        <div className="text-sm text-gray-500">
-                          {flight.route.destinationAirport.airportCode}
-                        </div>
-                      </div>
-                    </div>
 
-                    {/* Price */}
-                    <div className="text-right">
-                      <div className="text-lg font-medium">
-                        ₹{flight.ticketPrice.toLocaleString()}
+                        <button
+                          className="bg-blue-600 text-white py-2 px-4 md:px-6 rounded order-last md:order-none w-full md:w-auto"
+                          onClick={() => setSelectedFlight(flight)}
+                        >
+                          Book
+                        </button>
+
+                        <div className="text-xs flex items-center gap-1 text-blue-500 cursor-pointer">
+                          <span>Flight Details</span>
+                          <FaInfoCircle />
+                        </div>
                       </div>
-                      <div className="text-xs text-green-600">
-                        Extra ₹{Math.floor(Math.random() * 300)} Off
+
+                      {/* Render BookFlights component inline */}
+                      <div>
+                        {/* Render flight list or other content */}
+                        {selectedFlight && (
+                          <BookFlights
+                            flight={selectedFlight}
+                            onClose={handleCloseModal}
+                          />
+                        )}
                       </div>
                     </div>
+                  ))
+                ) : (
+                  <div className="bg-white rounded-lg p-6 text-center">
+                    <p className="text-lg text-gray-600 mb-2">
+                      No flights found matching your filters
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      Try adjusting your search criteria or filters
+                    </p>
                   </div>
-
-                  {/* Action Buttons */}
-                  <div className="flex flex-wrap md:flex-nowrap items-center justify-between border-t border-gray-200 pt-3 gap-2">
-                    <div className="text-xs flex items-center gap-1">
-                      <FaLock className="text-gray-500" />
-                      <span>Lock Price @₹299</span>
-                    </div>
-
-                    <button
-                      className="bg-blue-600 text-white py-2 px-4 md:px-6 rounded order-last md:order-none w-full md:w-auto"
-                      onClick={() => setSelectedFlight(flight)}
-                    >
-                      Book
-                    </button>
-
-                    <div className="text-xs flex items-center gap-1 text-blue-500 cursor-pointer">
-                      <span>Flight Details</span>
-                      <FaInfoCircle />
-                    </div>
-                  </div>
-
-                  {/* Render BookFlights component inline */}
-                  <div>
-      {/* Render flight list or other content */}
-      {selectedFlight && (
-        <BookFlights flight={selectedFlight} onClose={handleCloseModal} />
-      )}
-    </div>
-                </div>
-              ))
-            ) : (
-              <div className="bg-white rounded-lg p-6 text-center">
-                <p className="text-lg text-gray-600 mb-2">
-                  No flights found matching your filters
-                </p>
-                <p className="text-sm text-gray-500">
-                  Try adjusting your search criteria or filters
-                </p>
+                )}
               </div>
+            </th>
+            {/*If Round trip is selected*/}
+            {tripType === "roundTrip" && (
+              <th>
+                  <div className="bg-gray-100 p-4 rounded-b-lg">
+                    {/* Return Flights Section */}
+                    <div className="bg-gray-100 p-4 rounded-b-lg mt-4">
+                      <div className="text-sm text-gray-600 mb-4">
+                        Return Flights (
+                        {
+                          displayedFlights.filter(
+                            (flight) =>
+                              flight.route.originAirport.airportCode ===
+                                formData1.from.split(" - ")[0] &&
+                              flight.route.destinationAirport.airportCode ===
+                                formData1.to.split(" - ")[0]
+                          ).length
+                        }{" "}
+                        Available)
+                      </div>
+                      {displayedFlights
+                        .filter(
+                          (flight) =>
+                            flight.route.originAirport.airportCode ===
+                              formData1.from.split(" - ")[0] &&
+                            flight.route.destinationAirport.airportCode ===
+                              formData1.to.split(" - ")[0]
+                        )
+                        .map((flight) => (
+                          <div
+                            key={flight.flightId}
+                            className="bg-white rounded-lg mb-4 p-3 relative"
+                          >
+                            {/* Tags */}
+                            {flight.cheapest && (
+                              <div className="absolute top-0 left-0 bg-blue-500 text-white text-xs px-2 py-1 rounded-tl-lg">
+                                Cheapest
+                              </div>
+                            )}
+                            {flight.bestSeller && (
+                              <div className="absolute top-0 left-0 bg-green-500 text-white text-xs px-2 py-1 rounded-tl-lg">
+                                Best Seller
+                              </div>
+                            )}
+                            {flight.freeMeal && (
+                              <div className="absolute top-4 left-0 bg-amber-100 text-amber-800 text-xs px-2 py-1">
+                                🍽 Free Meal
+                              </div>
+                            )}
+
+                            {/* Flight Details */}
+                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-3">
+                              {/* Airline Info */}
+                              <div className="flex items-center gap-3">
+                                <div
+                                  className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                                    flight.airline.airlineName === "FlyHigh"
+                                      ? "bg-blue-500 text-white"
+                                      : "bg-red-500 text-white"
+                                  }`}
+                                >
+                                  {flight.airline.airlineName === "FlyHigh" ? (
+                                    <FaPlane />
+                                  ) : (
+                                    flight.airline.airlineName.charAt(0)
+                                  )}
+                                </div>
+                                <div>
+                                  <div className="font-medium">
+                                    {flight.airline.airlineName}
+                                  </div>
+                                  <div className="text-xs text-gray-500">
+                                    {flight.flightNumber}
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Departure, Duration, and Arrival */}
+                              <div className="flex flex-1 justify-between items-center">
+                                {/* Departure */}
+                                <div className="text-center">
+                                  <div className="text-lg font-medium">
+                                    {new Date(
+                                      flight.departureTime
+                                    ).toLocaleString()}
+                                  </div>
+                                  <div className="text-sm text-gray-500">
+                                    {flight.route.originAirport.airportCode}
+                                  </div>
+                                </div>
+
+                                {/* Duration */}
+                                <div className="flex flex-col items-center">
+                                  <div className="text-sm text-gray-500">
+                                    {flight.route.flightTime} mins
+                                  </div>
+                                  <div className="relative w-16 md:w-24 h-px bg-gray-300 my-1">
+                                    <div className="absolute -top-1 right-0 text-xs">
+                                      ✈
+                                    </div>
+                                  </div>
+                                  <div className="text-xs text-gray-500">
+                                    {flight.route.distance} km
+                                  </div>
+                                </div>
+
+                                {/* Arrival */}
+                                <div className="text-center">
+                                  <div className="text-lg font-medium">
+                                    {new Date(
+                                      flight.arrivalTime
+                                    ).toLocaleTimeString()}
+                                  </div>
+                                  <div className="text-sm text-gray-500">
+                                    {
+                                      flight.route.destinationAirport
+                                        .airportCode
+                                    }
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Price */}
+                              <div className="text-right">
+                                <div className="text-lg font-medium">
+                                  ₹{flight.ticketPrice.toLocaleString()}
+                                </div>
+                                <div className="text-xs text-green-600">
+                                  Extra ₹{Math.floor(Math.random() * 300)} Off
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="flex flex-wrap md:flex-nowrap items-center justify-between border-t border-gray-200 pt-3 gap-2">
+                              <div className="text-xs flex items-center gap-1">
+                                <FaLock className="text-gray-500" />
+                                <span>Lock Price @₹299</span>
+                              </div>
+
+                              <button
+                                className="bg-blue-600 text-white py-2 px-4 md:px-6 rounded order-last md:order-none w-full md:w-auto"
+                                onClick={() => setSelectedFlight(flight)}
+                              >
+                                Book
+                              </button>
+
+                              <div className="text-xs flex items-center gap-1 text-blue-500 cursor-pointer">
+                                <span>Flight Details</span>
+                                <FaInfoCircle />
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+              </th>
             )}
-
-            {/* Promo Banner */}
-            <div className="bg-orange-500 text-white rounded-lg p-4 flex flex-col md:flex-row justify-between items-center gap-4">
-              <div>
-                <h3 className="font-bold mb-1">
-                  Unlock exclusive 12% Off on your first booking.
-                </h3>
-                <p>Code: NEW</p>
-              </div>
-              <div className="flex items-center gap-4">
-                <FaPlane className="text-2xl hidden md:block" />
-                <button className="bg-white text-orange-500 px-4 py-2 rounded w-full md:w-auto">
-                  Log in
-                </button>
-              </div>
-            </div>
-          </div>
+            </tr>
+          </table>
         </div>
       </div>
     </div>

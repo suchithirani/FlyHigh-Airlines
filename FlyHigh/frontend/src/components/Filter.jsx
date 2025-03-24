@@ -18,30 +18,7 @@ const Filters = ({
     <div className="w-full lg:w-52 bg-white rounded-lg shadow-md p-4 h-fit">
       <h3 className="font-medium text-lg mb-4">Filters</h3>
       
-      {/* Stops Filter */}
-      <div className="mb-6 pb-4 border-b border-gray-200">
-        <h4 className="font-medium mb-2">Stops</h4>
-        <div className="space-y-2">
-          <label className="flex items-center gap-2 text-sm cursor-pointer">
-            <input 
-              type="checkbox" 
-              className="w-4 h-4" 
-              checked={stops.nonStop}
-              onChange={() => toggleStop('nonStop')}
-            />
-            Non-Stop
-          </label>
-          <label className="flex items-center gap-2 text-sm cursor-pointer">
-            <input 
-              type="checkbox" 
-              className="w-4 h-4" 
-              checked={stops.oneStop}
-              onChange={() => toggleStop('oneStop')}
-            />
-            1 Stop
-          </label>
-        </div>
-      </div>
+      
       
       {/* Price Filter */}
       <div className="mb-6 pb-4 border-b border-gray-200">
@@ -71,34 +48,34 @@ const Filters = ({
         <h4 className="font-medium mb-2">Departure Time</h4>
         <div className="grid grid-cols-2 gap-2">
           <button 
-            className={`flex flex-col items-center p-2 border rounded ${timeFilters.earlyMorning ? 'border-orange-500 bg-orange-50' : 'border-gray-300'}`}
+            className={`flex flex-col items-center p-2 border rounded ${timeFilters.earlyMorning ? 'border-blue-500 bg-blue-50' : 'border-gray-300'}`}
             onClick={() => toggleTimeFilter('earlyMorning')}
           >
-            <FaMoon className="text-orange-500 mb-1" />
+            <FaMoon className="text-blue-500 mb-1" />
             <span className="text-xs">Early Morning</span>
             <span className="text-xs text-gray-500">12AM - 6AM</span>
           </button>
           <button 
-            className={`flex flex-col items-center p-2 border rounded ${timeFilters.morning ? 'border-orange-500 bg-orange-50' : 'border-gray-300'}`}
+            className={`flex flex-col items-center p-2 border rounded ${timeFilters.morning ? 'border-blue-500 bg-blue-50' : 'border-gray-300'}`}
             onClick={() => toggleTimeFilter('morning')}
           >
-            <FaSun className="text-orange-500 mb-1" />
+            <FaSun className="text-blue-500 mb-1" />
             <span className="text-xs">Morning</span>
             <span className="text-xs text-gray-500">6AM - 12PM</span>
           </button>
           <button 
-            className={`flex flex-col items-center p-2 border rounded ${timeFilters.midDay ? 'border-orange-500 bg-orange-50' : 'border-gray-300'}`}
+            className={`flex flex-col items-center p-2 border rounded ${timeFilters.midDay ? 'border-blue-500 bg-blue-50' : 'border-gray-300'}`}
             onClick={() => toggleTimeFilter('midDay')}
           >
-            <FaClock className="text-orange-500 mb-1" />
+            <FaClock className="text-blue-500 mb-1" />
             <span className="text-xs">Mid Day</span>
             <span className="text-xs text-gray-500">12PM - 6PM</span>
           </button>
           <button 
-            className={`flex flex-col items-center p-2 border rounded ${timeFilters.night ? 'border-orange-500 bg-orange-50' : 'border-gray-300'}`}
+            className={`flex flex-col items-center p-2 border rounded ${timeFilters.night ? 'border-blue-500 bg-blue-50' : 'border-gray-300'}`}
             onClick={() => toggleTimeFilter('night')}
           >
-            <FaMoon className="text-orange-500 mb-1" />
+            <FaMoon className="text-blue-500 mb-1" />
             <span className="text-xs">Night</span>
             <span className="text-xs text-gray-500">6PM - 12AM</span>
           </button>

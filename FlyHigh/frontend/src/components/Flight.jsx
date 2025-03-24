@@ -249,7 +249,6 @@ const FlightTimetable = () => {
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Seats</th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Price</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
           </tr>
         </thead>
         <tbody className="bg-white divide-y divide-gray-200">
@@ -257,7 +256,7 @@ const FlightTimetable = () => {
             filteredFlights.map((flight) => {
               const status = getFlightStatus(flight);
               return (
-                <tr key={flight.flightId} className="hover:bg-gray-50">+
+                <tr key={flight.flightId} className="hover:bg-gray-50">
                   <td className="px-6 py-4 font-medium">{flight.flightNumber}</td>
                   <td className="px-6 py-4">{flight.airline?.airlineName}</td>
                   <td className="px-6 py-4">{flight.route?.originAirport?.city}</td>
@@ -275,9 +274,7 @@ const FlightTimetable = () => {
                   <td className="px-6 py-4">{flight.availableSeats}</td>
                   <td className="px-6 py-4 font-medium">₹{flight.ticketPrice?.toLocaleString()}</td>
                   <td className="px-6 py-4">
-                    <button className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 text-xs rounded transition-colors">
-                      Book
-                    </button>
+                    
                   </td>
                 </tr>
               );
