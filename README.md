@@ -13,7 +13,7 @@ Database: [MySQL]
 
 To clone Repository
 
-git clone https://github.com/your-username/flight-booking-system.git  
+git clone https://github.com/suchithirani/FlyHigh-Airlines.git
 cd flight-booking-system  
 cd FlyHigh
 cd frontend
