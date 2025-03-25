@@ -20,3 +20,10 @@ cd frontend
 
 npm install
 npm run dev
+
+for backend 
+go to application.properties
+
+update 
+spring.datasource.username=your-username
+spring.datasource.password=your-password
